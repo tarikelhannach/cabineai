@@ -7,6 +7,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import RoleDashboard from './components/RoleDashboard';
 import Login from './components/Login';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import CasesList from './components/CasesList';
 import DocumentsList from './components/DocumentsList';
 import UsersList from './components/UsersList';
@@ -48,6 +50,18 @@ function AppContent() {
           path="/login"
           element={
             isAuthenticated ? <Navigate to="/" /> : <Login />
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            isAuthenticated ? <Navigate to="/" /> : <ForgotPassword />
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            isAuthenticated ? <Navigate to="/" /> : <ResetPassword />
           }
         />
         <Route

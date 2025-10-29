@@ -28,6 +28,9 @@
     "results": "Resultados de Búsqueda",
     "noResults": "No se encontraron resultados"
   },
+  "errors": {
+    "generic": "Ha ocurrido un error. Por favor, intenta de nuevo"
+  },
   "auth": {
     "login": "Iniciar Sesión",
     "register": "Registrarse",
@@ -57,7 +60,26 @@
     "rememberMe": "Recuérdame",
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "2faCode": "Código 2FA",
-    "2faHelper": "Ingresa el código de tu aplicación de autenticación"
+    "2faHelper": "Ingresa el código de tu aplicación de autenticación",
+    "forgotPasswordHelp": "Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña",
+    "sendResetLink": "Enviar enlace de restablecimiento",
+    "backToLogin": "Volver al inicio de sesión",
+    "checkEmail": "Revisa tu correo electrónico",
+    "resetEmailSent": "Si el correo electrónico existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña",
+    "resetToken": "Token de restablecimiento",
+    "resetTokenNote": "Copia este token y úsalo en la página de restablecimiento de contraseña",
+    "continueReset": "Continuar con restablecimiento",
+    "resetPassword": "Restablecer contraseña",
+    "resetPasswordHelp": "Ingresa el token de restablecimiento y tu nueva contraseña",
+    "newPassword": "Nueva contraseña",
+    "resetTokenHelp": "Pega el token que recibiste por correo electrónico",
+    "resetPasswordButton": "Restablecer contraseña",
+    "allFieldsRequired": "Todos los campos son requeridos",
+    "passwordsDontMatch": "Las contraseñas no coinciden",
+    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
+    "passwordResetSuccess": "Contraseña restablecida",
+    "passwordResetSuccessMessage": "Tu contraseña ha sido actualizada exitosamente. Ahora puedes iniciar sesión con tu nueva contraseña",
+    "redirectingToLogin": "Redirigiendo al inicio de sesión..."
   },
   "dashboard": {
     "title": "Panel de Administración",

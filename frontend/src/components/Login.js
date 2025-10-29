@@ -16,6 +16,7 @@ import {
   Divider,
   InputAdornment,
   IconButton,
+  Link,
 } from '@mui/material';
 import {
   Visibility,
@@ -25,12 +26,14 @@ import {
   Email,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LanguageSelector from './LanguageSelector';
 
 const Login = () => {
   const { login } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     email: '',
@@ -296,9 +299,14 @@ const Login = () => {
           {renderStepContent()}
           
           <Box sx={{ mt: 4, textAlign: 'center' }}>
-            <Typography variant="body2" color="textSecondary">
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => navigate('/forgot-password')}
+              sx={{ cursor: 'pointer' }}
+            >
               {t('auth.forgotPassword')}
-            </Typography>
+            </Link>
           </Box>
         </CardContent>
       </Card>

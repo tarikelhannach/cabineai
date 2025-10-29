@@ -28,6 +28,9 @@
     "results": "Résultats de Recherche",
     "noResults": "Aucun résultat trouvé"
   },
+  "errors": {
+    "generic": "Une erreur s'est produite. Veuillez réessayer"
+  },
   "auth": {
     "login": "Se Connecter",
     "register": "S'inscrire",
@@ -57,7 +60,26 @@
     "rememberMe": "Se souvenir de moi",
     "forgotPassword": "Mot de passe oublié?",
     "2faCode": "Code 2FA",
-    "2faHelper": "Entrez le code de votre application d'authentification"
+    "2faHelper": "Entrez le code de votre application d'authentification",
+    "forgotPasswordHelp": "Entrez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe",
+    "sendResetLink": "Envoyer le lien de réinitialisation",
+    "backToLogin": "Retour à la connexion",
+    "checkEmail": "Vérifiez votre e-mail",
+    "resetEmailSent": "Si l'adresse e-mail existe dans notre système, vous recevrez des instructions pour réinitialiser votre mot de passe",
+    "resetToken": "Jeton de réinitialisation",
+    "resetTokenNote": "Copiez ce jeton et utilisez-le sur la page de réinitialisation du mot de passe",
+    "continueReset": "Continuer la réinitialisation",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "resetPasswordHelp": "Entrez le jeton de réinitialisation et votre nouveau mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "resetTokenHelp": "Collez le jeton que vous avez reçu par e-mail",
+    "resetPasswordButton": "Réinitialiser le mot de passe",
+    "allFieldsRequired": "Tous les champs sont requis",
+    "passwordsDontMatch": "Les mots de passe ne correspondent pas",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+    "passwordResetSuccess": "Mot de passe réinitialisé",
+    "passwordResetSuccessMessage": "Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe",
+    "redirectingToLogin": "Redirection vers la connexion..."
   },
   "dashboard": {
     "title": "Panneau d'Administration",

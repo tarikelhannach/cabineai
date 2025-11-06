@@ -74,9 +74,9 @@ async def lifespan(app: FastAPI):
 
 # Crear aplicación FastAPI
 app = FastAPI(
-    title="Sistema Judicial Digital - Marruecos",
-    description="Sistema completo de gestión judicial con HSM, OCR, búsqueda semántica y compliance gubernamental",
-    version="1.0.0",
+    title="JusticeAI Commercial - Multi-Tenant Law Firm Platform",
+    description="SaaS platform for law firms with OCR, document management, billing, and multi-language support (FR/AR/EN)",
+    version="2.0.0",
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
     lifespan=lifespan
@@ -156,10 +156,18 @@ async def get_metrics():
         }
     }
 
+# Add tenant and language middleware
+from .middleware.tenant import TenantMiddleware
+from .middleware.language import LanguageMiddleware
+
+app.add_middleware(TenantMiddleware)
+app.add_middleware(LanguageMiddleware)
+
 # Include routers
-from .routes import auth, cases, documents, users, audit, search, signatures
+from .routes import auth, cases, documents, users, audit, search, signatures, billing
 
 app.include_router(auth.router, prefix="/api")
+app.include_router(billing.router, prefix="/api")  # Billing routes for SaaS
 app.include_router(cases.router, prefix="/api")
 app.include_router(documents.router)
 app.include_router(users.router, prefix="/api")

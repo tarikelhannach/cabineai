@@ -1,30 +1,39 @@
-# Digital Judicial System - Morocco
+# JusticeAI Commercial - Multi-Tenant SaaS Platform
 
 ### Overview
-This project is a comprehensive digital judicial system for Morocco, aiming to modernize the country's legal infrastructure. It features a FastAPI backend and a React frontend with Material-UI, designed for government use. Key capabilities include secure case management with JWT authentication, robust role-based access control (RBAC), multi-language support (Spanish, French, Arabic, including RTL), and a modern, intuitive user interface. The system streamlines judicial processes, enhances efficiency, and ensures secure access to legal information, fully compliant with Moroccan legal requirements (Ley 09-08, Ley 53-05). The project is production-ready, with extensive testing, Docker-based deployment, automated backups, and comprehensive documentation.
+This project is a multi-tenant SaaS platform for law firms, transformed from the governmental JusticeAI system. It features a FastAPI backend and React frontend designed for commercial use by 600+ independent law firms. Key capabilities include complete tenant isolation (firm-based), subscription billing management, document digitization with OCR (50K pages), multi-language support (French, Arabic, English with RTL), and secure case (expediente) management. The platform uses a subscription model with implementation fees (20-30K MAD) and monthly per-lawyer fees (270 MAD).
 
 ### User Preferences
-- **Languages**: Multi-language support (Spanish, French, Arabic)
+- **Languages**: Multi-language support (French as default, Arabic, English) - Spanish removed for commercial version
 - **UI Framework**: Material-UI with modern design
 - **Theme**: Dark/Light mode with purple gradient
-- **Authentication**: JWT-based with localStorage persistence
+- **Authentication**: JWT-based with localStorage persistence and firm-based tenant isolation
 - **RTL Support**: Automatic RTL layout for Arabic language
 - **Language Persistence**: Selected language stored in localStorage
+- **Commercial Roles**: Admin (firm owner), Lawyer (attorney), Assistant (paralegal)
 
 ### System Architecture
-The system is built with a decoupled frontend and backend architecture, prioritizing a security-first, scalable, and localized approach.
+The system is built with a decoupled multi-tenant architecture, prioritizing firm-level data isolation, subscription management, and commercial scalability.
+
+#### Multi-Tenancy Implementation
+- **Firm Model**: Central tenant entity with subscription management, billing configuration, and language preferences
+- **Data Isolation**: All models (User, Document, Expediente, AuditLog) include firm_id foreign key with indexed filtering
+- **Middleware**: TenantMiddleware ensures automatic firm_id-based query filtering; LanguageMiddleware detects Accept-Language headers
+- **Subscription Validation**: BillingService validates active subscriptions before allowing operations like document uploads
 
 #### UI/UX Decisions
-The frontend features a modern, responsive design with a purple gradient theme, glassmorphism effects, and dark/light mode. It includes a responsive sidebar, dynamic content rendering, and role-specific dashboards for Admin, Judge, Lawyer, and Citizen users. Multi-language support with `react-i18next` includes full Right-to-Left (RTL) layout for Arabic. WCAG 2.1 AA compliance is met with skip navigation, ARIA labels, keyboard support, and verified color contrast.
+The frontend features a modern, responsive design with a purple gradient theme, glassmorphism effects, and dark/light mode. It includes a responsive sidebar, dynamic content rendering, and role-specific dashboards for Admin (firm owner), Lawyer (attorney), and Assistant (paralegal) users. Multi-language support with `react-i18next` includes full Right-to-Left (RTL) layout for Arabic, with French as the default language. WCAG 2.1 AA compliance is met with skip navigation, ARIA labels, keyboard support, and verified color contrast.
 
 #### Technical Implementations
 - **Frontend**: React 18 with Vite, Material-UI (MUI) v5, React Router v6, Axios, and `react-i18next`.
 - **Backend**: FastAPI, Python 3.11, SQLAlchemy for ORM, and PostgreSQL.
-- **Authentication**: JWT-based using `python-jose` and `passlib[bcrypt]`, with 2FA (TOTP) and password reset.
-- **Role-Based Access Control (RBAC)**: Implemented on both frontend and backend for granular access based on user roles (Admin, Judge, Lawyer, Clerk, Citizen), including field-level permissions.
-- **Case Management**: Provides CRUD operations and advanced search with filters and RBAC.
-- **Document Management**: Secure upload/download, OCR processing, Elasticsearch indexing, and HSM digital signatures.
-- **Internationalization**: Dynamic language switching and RTL adjustments for Spanish, French, and Arabic.
+- **Multi-Tenancy**: Firm-based tenant isolation with TenantMiddleware and LanguageMiddleware for i18n.
+- **Billing & Subscriptions**: BillingService handles fee calculation (270 MAD/lawyer/month), invoice generation, and subscription validation.
+- **Authentication**: JWT-based using `python-jose` and `passlib[bcrypt]`, with 2FA (TOTP) and firm-scoped tokens.
+- **Role-Based Access Control (RBAC)**: Implemented on both frontend and backend for granular access based on commercial roles (Admin, Lawyer, Assistant). Legacy governmental roles (Judge, Clerk, Citizen) kept for backward compatibility.
+- **Expediente Management**: Commercial case management with client names, matter types, assigned lawyers, and RBAC.
+- **Document Management**: Secure upload/download with firm_id isolation, OCR processing, Elasticsearch indexing, and subscription validation.
+- **Internationalization**: Dynamic language switching and RTL adjustments for French (default), Arabic, and English. Spanish removed for commercial version.
 - **OCR Processing**: Multi-engine system with automatic selection:
   - QARI-OCR (state-of-the-art Arabic, requires GPU)
   - EasyOCR (fast multi-language)

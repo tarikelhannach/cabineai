@@ -1,0 +1,78 @@
+{
+  "app": {
+    "title": "JusticeAI Commercial",
+    "subtitle": "Law Firm Management Platform"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "register": "Register",
+    "welcome": "Welcome back"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "lawyer": "Lawyer",
+    "assistant": "Assistant"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome",
+    "overview": "Overview",
+    "recentActivity": "Recent Activity"
+  },
+  "expedientes": {
+    "title": "Cases",
+    "new": "New Case",
+    "client": "Client",
+    "matterType": "Matter Type",
+    "status": "Status",
+    "assignedLawyer": "Assigned Lawyer",
+    "createdAt": "Created",
+    "description": "Description"
+  },
+  "documents": {
+    "title": "Documents",
+    "upload": "Upload Document",
+    "download": "Download",
+    "filename": "Filename",
+    "size": "Size",
+    "uploadedBy": "Uploaded By",
+    "uploadedAt": "Uploaded"
+  },
+  "billing": {
+    "title": "Billing",
+    "subscription": "Subscription",
+    "status": "Status",
+    "tier": "Plan",
+    "monthlyFee": "Monthly Fee",
+    "invoices": "Invoices",
+    "dueDate": "Due Date",
+    "amount": "Amount",
+    "paid": "Paid",
+    "pending": "Pending",
+    "overdue": "Overdue"
+  },
+  "firm": {
+    "name": "Firm Name",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "settings": "Firm Settings"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  }
+}

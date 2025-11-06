@@ -344,3 +344,84 @@ async def generate_monthly_invoice(
         description=invoice.description,
         paid_date=None
     )
+
+
+@router.get("/firm-stats")
+async def get_firm_stats(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get comprehensive firm statistics for dashboard.
+    Includes usage metrics, subscription info, and ROI calculations.
+    """
+    from ..models import Document, Expediente
+    from datetime import datetime
+    
+    firm_id = get_current_firm_id(request)
+    
+    # Get firm details
+    firm = db.query(Firm).filter(Firm.id == firm_id).first()
+    if not firm:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Firm not found"
+        )
+    
+    # Count resources (all filtered by firm_id)
+    num_documents = db.query(Document).filter(Document.firm_id == firm_id).count()
+    num_users = db.query(User).filter(User.firm_id == firm_id, User.is_active == True).count()
+    num_expedientes = db.query(Expediente).filter(Expediente.firm_id == firm_id).count()
+    
+    # Calculate time & money saved
+    # Assumption: Each document saves 30 minutes of manual work
+    hours_saved = num_documents * 0.5
+    # Average lawyer hourly rate in Morocco: 400 MAD/hour
+    money_saved_mad = hours_saved * 400
+    
+    # Calculate subscription days remaining
+    if firm.subscription_end:
+        days_remaining = (firm.subscription_end - date.today()).days
+    else:
+        days_remaining = 0
+    
+    # Calculate storage usage (approximation: 2MB per document average)
+    storage_used_gb = round((num_documents * 2) / 1024, 2) if num_documents > 0 else 0
+    
+    # Get next billing date from subscription
+    subscription = db.query(Subscription).filter(Subscription.firm_id == firm_id).first()
+    next_billing_date = subscription.next_billing_date if subscription else None
+    
+    return {
+        "firm_name": firm.name,
+        "subscription_status": firm.subscription_status.value,
+        "subscription_tier": firm.subscription_tier.value,
+        "subscription_end": firm.subscription_end.isoformat() if firm.subscription_end else None,
+        "days_remaining": days_remaining,
+        "is_active": firm.subscription_status == SubscriptionStatus.ACTIVE,
+        
+        # Usage statistics
+        "documents_count": num_documents,
+        "users_count": num_users,
+        "expedientes_count": num_expedientes,
+        
+        # ROI calculations
+        "time_saved_hours": round(hours_saved, 1),
+        "money_saved_mad": round(money_saved_mad),
+        
+        # Storage
+        "storage_used_gb": storage_used_gb,
+        "max_storage_gb": firm.max_storage_gb,
+        "storage_percentage": round((storage_used_gb / firm.max_storage_gb) * 100, 1) if firm.max_storage_gb > 0 else 0,
+        
+        # Billing
+        "next_billing_date": next_billing_date.isoformat() if next_billing_date else None,
+        "monthly_fee": subscription.monthly_cost if subscription else 0,
+        
+        # Limits
+        "max_users": firm.max_users,
+        "users_percentage": round((num_users / firm.max_users) * 100, 1) if firm.max_users > 0 else 0,
+        "max_documents": firm.max_documents,
+        "documents_percentage": round((num_documents / firm.max_documents) * 100, 1) if firm.max_documents > 0 else 0
+    }

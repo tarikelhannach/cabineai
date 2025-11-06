@@ -9,7 +9,7 @@ from pathlib import Path
 import uuid
 
 from ..database import get_db
-from ..models import Document as DocumentModel, User, Case
+from ..models import Document as DocumentModel, User, Expediente, Firm
 from ..auth.jwt import get_current_user
 from pydantic import BaseModel
 from datetime import datetime
@@ -60,25 +60,45 @@ async def upload_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # 🔒 MULTI-TENANT SECURITY: Validate firm access
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+    
+    # 💳 SUBSCRIPTION VALIDATION: Check active subscription
+    firm = db.query(Firm).filter(Firm.id == current_user.firm_id).first()
+    if not firm:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Firm not found"
+        )
+    
+    if firm.subscription_status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Subscription expired. Please renew to upload documents."
+        )
+    
+    # 🔒 TENANT ISOLATION: Validate case belongs to same firm
     if case_id:
-        case = db.query(Case).filter(Case.id == case_id).first()
+        case = db.query(Expediente).filter(
+            Expediente.id == case_id,
+            Expediente.firm_id == current_user.firm_id  # ← CRITICAL: Prevent cross-tenant access
+        ).first()
         if not case:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Caso no encontrado"
+                detail="Expediente not found or access denied"
             )
         
-        if current_user.role.value not in ["admin", "clerk"]:
-            if current_user.role.value == "judge":
-                if case.assigned_judge_id != current_user.id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="No autorizado para subir documentos a este caso"
-                    )
-            elif case.owner_id != current_user.id:
+        # RBAC: Check permissions
+        if current_user.role.value not in ["admin", "lawyer"]:
+            if case.owner_id != current_user.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="No autorizado para subir documentos a este caso"
+                    detail="Not authorized to upload documents to this expediente"
                 )
     
     if not file.content_type in ALLOWED_MIME_TYPES:
@@ -108,6 +128,7 @@ async def upload_document(
             f.write(contents)
         
         new_document = DocumentModel(
+            firm_id=current_user.firm_id,  # ← CRITICAL: Always set firm_id
             filename=file.filename,
             file_path=str(file_path),
             file_size=file_size,
@@ -154,28 +175,25 @@ async def download_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    document = db.query(DocumentModel).filter(DocumentModel.id == document_id).first()
+    # 🔒 TENANT ISOLATION: Filter by firm_id
+    document = db.query(DocumentModel).filter(
+        DocumentModel.id == document_id,
+        DocumentModel.firm_id == current_user.firm_id  # ← CRITICAL
+    ).first()
     
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Documento no encontrado"
+            detail="Document not found or access denied"
         )
     
-    if document.case_id:
-        case = db.query(Case).filter(Case.id == document.case_id).first()
-        if not case:
-            raise HTTPException(status_code=404, detail="Caso asociado no encontrado")
-        
-        if current_user.role.value not in ["admin", "clerk"]:
-            if current_user.role.value == "judge":
-                if case.assigned_judge_id != current_user.id:
-                    raise HTTPException(status_code=403, detail="No autorizado para acceder a este documento")
-            elif case.owner_id != current_user.id:
-                raise HTTPException(status_code=403, detail="No autorizado para acceder a este documento")
-    
-    elif document.uploaded_by != current_user.id and current_user.role.value not in ["admin", "clerk"]:
-        raise HTTPException(status_code=403, detail="No autorizado para acceder a este documento")
+    # RBAC: Check permissions
+    if current_user.role.value not in ["admin", "lawyer"]:
+        if document.uploaded_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to access this document"
+            )
     
     try:
         file_path = Path(document.file_path)
@@ -208,19 +226,22 @@ async def get_documents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(DocumentModel)
+    # 🔒 TENANT ISOLATION: Always filter by firm_id
+    query = db.query(DocumentModel).filter(
+        DocumentModel.firm_id == current_user.firm_id  # ← CRITICAL
+    )
     
     if case_id:
-        case = db.query(Case).filter(Case.id == case_id).first()
+        # Validate case belongs to same firm
+        case = db.query(Expediente).filter(
+            Expediente.id == case_id,
+            Expediente.firm_id == current_user.firm_id  # ← CRITICAL
+        ).first()
         if not case:
-            raise HTTPException(status_code=404, detail="Caso no encontrado")
-        
-        if current_user.role.value not in ["admin", "clerk"]:
-            if current_user.role.value == "judge":
-                if case.assigned_judge_id != current_user.id:
-                    raise HTTPException(status_code=403, detail="No autorizado")
-            elif case.owner_id != current_user.id:
-                raise HTTPException(status_code=403, detail="No autorizado")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Expediente not found or access denied"
+            )
         
         query = query.filter(DocumentModel.case_id == case_id)
     else:

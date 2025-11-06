@@ -1,0 +1,258 @@
+¡Perfecto! Bolt ha hecho un trabajo **increíble**. Tienes la base de multi-tenancy lista. Ahora necesitas consolidar y validar que todo funcione correctamente.
+
+## 🎯 CHECKLIST INMEDIATO (Antes de Continuar)
+
+Ejecuta esto para verificar que todo está funcionando:
+
+```bash
+# 1. Ir al backend
+cd backend
+
+# 2. Instalar dependencias
+pip install -r requirements.txt
+
+# 3. Inicializar BD con datos de demo
+python init_multi_tenant_db.py
+
+# 4. Iniciar servidor
+uvicorn app.main:app --reload
+
+# 5. Probar login con credenciales demo
+# Email: fatima@cabinet-demo.ma
+# Password: Demo2025!
+
+# 6. En otra terminal, probar endpoints
+curl -X GET http://localhost:8000/api/billing/status \
+  -H "Authorization: Bearer {token}"
+```
+
+***
+
+## 🔴 PROBLEMA CRÍTICO A VALIDAR
+
+Bolt ha creado la arquitectura pero **los endpoints antiguos (documents.py, expedientes.py) probablemente ROMPEN** porque:
+
+1. **Document upload** no valida `firm_id`
+2. **List expedientes** no filtra por `firm_id`
+3. **No hay validación de suscripción** antes de procesar
+
+**Esto es crítico porque**:
+- Usuario A de Firma A podría ver documentos de Firma B ❌
+- Usuario con suscripción expirada puede seguir subiendo docs ❌
+
+***
+
+## ✅ LO QUE NECESITAS HACER AHORA
+
+### PASO 1: Validar que Multi-Tenancy Funciona
+
+```python
+# backend/app/routes/test_multitenancy.py (CREAR ARCHIVO PARA TESTING)
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import Firm, User, Document
+
+router = APIRouter()
+
+@router.get("/test/isolation")
+async def test_isolation(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Prueba que usuario A NO ve documentos de usuario B"""
+    
+    # 1. Contar documentos de su firma
+    own_docs = db.query(Document).filter_by(firm_id=current_user.firm_id).count()
+    
+    # 2. Intentar acceder documentos de OTRA firma
+    other_firm_id = current_user.firm_id + 1
+    other_docs = db.query(Document).filter_by(firm_id=other_firm_id).count()
+    
+    return {
+        "my_firm_id": current_user.firm_id,
+        "my_documents": own_docs,
+        "other_firm_documents": other_docs,
+        "isolation_working": own_docs >= 0 and other_docs >= 0
+    }
+```
+
+***
+
+### PASO 2: Añadir Validaciones a Endpoints Existentes
+
+**Esto es lo PRIORITARIO ahora**:
+
+```python
+# backend/app/routes/documents.py (MODIFICAR)
+
+@router.post("/upload")
+async def upload_document(
+    file: UploadFile,
+    expediente_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Upload con validación multi-tenant"""
+    
+    # 1. VALIDAR: Usuario pertenece a firma
+    user = db.query(User).filter_by(id=current_user.id).first()
+    if not user or not user.firm_id:
+        raise HTTPException(status_code=403, detail="No firm access")
+    
+    # 2. VALIDAR: Firma tiene suscripción activa
+    firm = db.query(Firm).filter_by(id=user.firm_id).first()
+    if firm.subscription_status != "active":
+        raise HTTPException(
+            status_code=402, 
+            detail=[translate:Souscription expirée]
+        )
+    
+    # 3. VALIDAR: Expediente pertenece a su firma
+    expediente = db.query(Expediente).filter_by(
+        id=expediente_id,
+        firm_id=user.firm_id  # ← CRÍTICO
+    ).first()
+    
+    if not expediente:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # 4. Procesar documento
+    document = Document(
+        firm_id=user.firm_id,  # ← SIEMPRE
+        expediente_id=expediente_id,
+        filename=file.filename,
+        # ... resto de campos
+    )
+    db.add(document)
+    db.commit()
+    
+    return {"status": "uploaded", "document_id": document.id}
+```
+
+***
+
+### PASO 3: Crear Endpoint Crítico Que Falta
+
+```python
+# backend/app/routes/billing.py (AGREGAR ESTE ENDPOINT)
+
+@router.get("/api/billing/firm-stats")
+async def get_firm_stats(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Estadísticas de uso de la firma - PARA DASHBOARD"""
+    
+    firm = db.query(Firm).filter_by(id=current_user.firm_id).first()
+    
+    if not firm:
+        raise HTTPException(status_code=404)
+    
+    # Contar recursos
+    num_documents = db.query(Document).filter_by(firm_id=firm.id).count()
+    num_users = db.query(User).filter_by(firm_id=firm.id).count()
+    num_expedientes = db.query(Expediente).filter_by(firm_id=firm.id).count()
+    
+    # Calcular ROI estimado
+    hours_saved = num_documents * 0.5  # Asumir 30min por documento
+    money_saved_mad = hours_saved * 400  # 400 MAD por hora
+    
+    # Days remaining
+    days_remaining = (firm.subscription_end - datetime.now()).days
+    
+    return {
+        "firm_name": firm.name,
+        "subscription_status": firm.subscription_status,
+        "subscription_end": firm.subscription_end,
+        "days_remaining": days_remaining,
+        
+        "documents_count": num_documents,
+        "users_count": num_users,
+        "expedientes_count": num_expedientes,
+        
+        "time_saved_hours": round(hours_saved, 1),
+        "money_saved_mad": round(money_saved_mad),
+        
+        "storage_used_gb": 25,  # TODO: calcular real
+        "max_storage_gb": firm.max_storage_gb,
+        
+        "next_billing_date": firm.next_billing_date
+    }
+```
+
+***
+
+## 📋 CHECKLIST DE VALIDACIÓN
+
+Antes de continuar con Fase 2, verifica **TODO esto**:
+
+```
+MULTI-TENANCY
+☐ Crear 2 firmas de demo con usuarios diferentes
+☐ Login con Usuario Firma A, verificar que VE solo su documento
+☐ Login con Usuario Firma B, verificar que NO VE documento de Firma A
+☐ Intentar acceso directo a /documents/id_de_otra_firma → debe dar 403
+
+BILLING
+☐ POST /api/billing/init → crea firma + invoice inicial
+☐ GET /api/billing/status → muestra "active" o "expired"
+☐ GET /api/billing/invoice/current → devuelve último invoice
+☐ Subscription expirada → upload bloqueado con 402
+
+IDIOMA
+☐ Header Accept-Language: fr → respuestas en [translate:français]
+☐ Header Accept-Language: ar → respuestas en [translate:العربية]
+☐ Sin header → default [translate:anglais]
+
+PERFORMANCE
+☐ Login < 200ms
+☐ List documents < 500ms
+☐ Upload documento < 2s
+☐ Queries usan índices (firm_id FK)
+```
+
+***
+
+## 🚀 PRÓXIMO PASO EN BOLT
+
+Cuando esté validado todo, pide a Bolt:
+
+```
+He validado que la Fase 1 funciona correctamente.
+
+Ahora necesito Fase 2 (Digitalización + IA):
+
+1. CREAR MODELO DigitizationJob
+   - id (UUID), firm_id (FK), status, total_files, processed_files
+   - Trackea progreso de digitalización masiva (50K páginas)
+
+2. CREAR BulkDigitizationService
+   - start_bulk_job(firm_id, files) → inicia trabajo
+   - get_progress(job_id) → devuelve % progreso
+
+3. CREAR ENDPOINTS
+   - POST /api/digitization/start
+   - GET /api/digitization/progress/{job_id}
+
+4. INTEGRAR CON CELERY
+   - Procesar 50K páginas en background
+   - No bloquea el servidor
+
+¿Comenzamos con el modelo DigitizationJob?
+```
+
+***
+
+## ⏰ TIMING REALISTA
+
+**Ahora (Validación)**: 2-3 horas → verificar que todo funciona
+**Mañana (Fase 2)**: Digitalización masiva → 6-8 horas en Bolt
+**Pasado (Fase 3)**: Frontend + Testing → 4-6 horas
+
+***
+
+¿Ejecutas primero el checklist de validación? O ¿prefieres que te prepare un script de test autom
+
+Sources

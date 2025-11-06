@@ -1,0 +1,248 @@
+```markdown
+# 🚀 PROMPT PARA BOLT.NEW - JUSTICEAI COMMERCIAL
+
+## PROYECTO NUEVO: SaaS Multi-Tenant para Despachos de Abogados
+
+**Base de código**: Reutilizar JusticeAI gubernamental (FastAPI + React + PostgreSQL + Elasticsearch + OCR)
+
+**Cambio**: De single-tenant (gobierno) → multi-tenant (600 despachos independientes)
+
+**Idiomas**: [translate:Francés y Árabe] (sin español)
+
+---
+
+## 🎯 OBJETIVO GENERAL
+
+Crear plataforma SaaS que permita a despachos de abogados:
+1. **Digitalizar archivos históricos**: 50,000 páginas de papel → base de datos
+2. **Procesar con IA**: OCR + BERT árabe extrae automáticamente personas, fechas, importes
+3. **Buscar instantáneamente**: En todo el archivo (vs 30 minutos búsqueda manual)
+4. **Pagar por suscripción**: Fee inicial (20-30K MAD) + 270 MAD/abogado/mes
+
+---
+
+## 💰 MODELO COMERCIAL
+
+```
+DESPACHO PAGA:
+├─ Fee Inicial: 20,600 MAD (Básico) o 30,600 MAD (Completo)
+│  └─ Cubre: GPU 3 años + capacitación + (digitalización 50K si Completo)
+└─ Mensual: 270 MAD × num_abogados
+   └─ Cubre: Procesamiento ilimitado + búsqueda + soporte
+
+EJEMPLO: Despacho 6 abogados
+├─ Paga inicial: 30,600 MAD
+├─ Paga mes 1-36: 1,620 MAD/mes (6 × 270)
+└─ ROI: Recuperan inversión en 1-2 meses
+   └─ Ahorran 52,000 MAD/mes en tiempo + espacio
+```
+
+---
+
+## 🔧 REQUISITOS TÉCNICOS (FASE 1 - SEMANAS 1-6)
+
+### 1. MULTI-TENANCY (CRÍTICO)
+
+- Crear modelo `Firm` (despacho)
+- Agregar `firm_id` FK a: `User`, `Document`, `Expediente`
+- Crear middleware `TenantMiddleware` que filtra todas las queries por `firm_id`
+- **Test**: Usuario A NO puede ver datos de Usuario B
+
+### 2. SISTEMA DE USUARIOS (SOLO 3 ROLES)
+
+```
+class Role(str, Enum):
+    ADMIN = "admin"              # Dueño despacho
+    LAWYER = "lawyer"            # Abogados
+    ASSISTANT = "assistant"      # Paralegales
+```
+
+### 3. BILLING & SUSCRIPCIÓN
+
+- Crear modelos: `Invoice`, `Subscription`
+- Crear `BillingService` con métodos:
+  - `calculate_monthly_fee(firm_id)` → num_lawyers × 270
+  - `check_subscription_status(firm_id)` → active/expired
+  - `generate_invoice(firm_id, month, year)`
+- Endpoints:
+  - POST `/billing/init` (registro nuevo)
+  - GET `/billing/invoice/current`
+  - GET `/billing/status`
+- **Validación crítica**: Antes de procesar documento, verificar `subscription_status == 'active'`
+
+### 4. I18N: [translate:Francés + Árabe]
+
+- Backend: Usar `fastapi-babel` con soporte i18n
+- Frontend: `react-i18next` (ya existe en JusticeAI)
+- Idiomas: [translate:fr] (francés), [translate:ar] (árabe) + [translate:en] (inglés)
+- RTL: Árabe con dirección right-to-left automática
+- Endpoints devuelven mensajes en idioma de usuario (Accept-Language header)
+
+### 5. CONTEXTO DE BD
+
+- Cambiar `Case` → `Expediente` (nombrado para contexto comercial)
+- Modificar schema: agregar `firm_id` FK a TODOS los modelos
+- Migración Alembic: `alembic revision -m "add_multi_tenant"`
+
+---
+
+## ✅ TAREAS ESPECÍFICAS (EN ORDEN)
+
+**SEMANA 1-2:**
+- [ ] Crear carpeta proyecto: `justiceai-commercial/`
+- [ ] Copiar código de JusticeAI gubernamental
+- [ ] Actualizar docker-compose.yml
+- [ ] Crear modelo `Firm` en `backend/app/models/firm.py`
+- [ ] Agregar i18n base (carpeta locales, setup fastapi-babel)
+
+**SEMANA 3-4:**
+- [ ] Agregar `firm_id` FK a `User`, `Document`, `Expediente`, etc.
+- [ ] Crear `backend/app/middleware/tenant.py`
+- [ ] Crear `backend/app/middleware/language.py` (detect language from header)
+- [ ] Modificar TODOS los endpoints para filtrar por `firm_id`
+- [ ] Tests de aislamiento: 10 despachos, datos completamente aislados
+
+**SEMANA 5-6:**
+- [ ] Crear modelos `Invoice` + `Subscription`
+- [ ] Crear `BillingService` con lógica de cálculo
+- [ ] Endpoints de billing: POST/GET
+- [ ] Validación en documento upload: `if subscription_status != 'active': raise 403`
+- [ ] Testing: flujo completo de pago + renovación
+- [ ] Traducir mensajes de error a [translate:fr] y [translate:ar]
+
+---
+
+## 🗄️ ESTRUCTURA MÍNIMA DE BD
+
+```
+Firm (despacho)
+├── id, name, email, phone
+├── subscription_tier: "basic" | "complete"
+├── subscription_status: "active" | "expired"
+├── subscription_start, subscription_end
+├── implementation_fee_paid: bool
+├── monthly_fee_per_lawyer: int (270)
+├── language_preference: "en" | "fr" | "ar"
+└── max_users, max_documents, max_storage_gb
+
+User (adaptado)
+├── id, email, firm_id (FK) ← NUEVA
+├── role: "admin" | "lawyer" | "assistant"
+├── language: "en" | "fr" | "ar"
+└── (resto igual)
+
+Document (adaptado)
+├── id, firm_id (FK) ← NUEVA
+├── filename, original_text
+├── entities (JSON), document_type, confidence_score
+└── (resto igual)
+
+Expediente (fue Case, renombrado)
+├── id, firm_id (FK) ← NUEVA
+├── client_name, matter_type, status
+└── (resto igual)
+
+Invoice (NUEVA)
+├── id, firm_id (FK)
+├── amount (MAD), invoice_date, due_date
+├── status: "pending" | "paid" | "overdue"
+└── invoice_number
+
+Subscription (NUEVA)
+├── firm_id (PK), status, start_date, end_date
+├── plan_tier, monthly_cost
+└── next_billing_date
+```
+
+---
+
+## 🎯 DEFINICIÓN DE "LISTO"
+
+Cuando FASE 1 esté completa:
+
+✅ 10 despachos independientes sin data leaks
+✅ Multi-tenant funcional en todos los endpoints
+✅ Billing calcula automáticamente monthly fee
+✅ Suscripción se bloquea si vence
+✅ Migración BD sin errores
+✅ Tests de aislamiento pasan
+✅ Mensajes en [translate:FR/AR] según Accept-Language header
+✅ 0 errores 500 en operación básica
+
+---
+
+## 📝 CONTEXTO REUTILIZABLE
+
+**De JusticeAI gubernamental (REUTILIZAR):**
+- ✅ FastAPI backend structure
+- ✅ PostgreSQL schema (con adaptaciones)
+- ✅ React frontend
+- ✅ Docker infrastructure
+- ✅ Celery workers (para después)
+- ✅ OCR Tesseract (para después)
+- ✅ Elasticsearch (para después)
+- ✅ I18n framework (ya existe)
+
+**Nuevo (CREAR):**
+- 🆕 Modelo Firm
+- 🆕 TenantMiddleware
+- 🆕 BillingService
+- 🆕 Invoice + Subscription models
+- 🆕 Language detection middleware
+
+---
+
+## 💡 I18N DETALLES
+
+**Backend**:
+```
+from fastapi_babel import Babel
+
+babel = Babel(app, default_locale='en', default_timezone='UTC')
+
+@app.get("/test")
+async def test(request: Request):
+    # Detecta idioma de Accept-Language header
+    lang = request.headers.get('Accept-Language', 'en').split(',')
+    
+    if lang == 'fr':
+        return {"message": "Bienvenue"}  # Francés
+    elif lang == 'ar':
+        return {"message": "أهلا وسهلا"}  # Árabe
+    return {"message": "Welcome"}  # Inglés
+```
+
+**Frontend**: 
+- Ya existe `react-i18next` en JusticeAI
+- Agregar traducciones para [translate:FR] y [translate:AR]
+- RTL automático para árabe
+
+---
+
+## 🚀 EMPEZAR
+
+Copiar este prompt a Bolt y pedir:
+
+> "Crear PROYECTO NUEVO: justiceai-commercial"
+> "Reutilizar código de JusticeAI gubernamental"
+> "Implementar FASE 1: Multi-tenancy + Billing + I18N (semanas 1-6)"
+> "Idiomas: Francés y Árabe (no español)"
+> "Primero: Crear modelo Firm + agregar firm_id a User, Document, Expediente"
+> "Segundo: Crear middleware para tenant isolation"
+> "Tercero: Setup i18n con fastapi-babel"
+
+```
+
+***
+
+¿Así está mejor? Sin referencias a español, solo français y العربية.
+
+Sources
+[1] Fastapi i18n: A step-by-step guide with examples https://lokalise.com/blog/fastapi-internationalization/
+[2] Internationalization and Localization in FastAPI - App Generator https://app-generator.dev/docs/technologies/fastapi/i18n-localization.html
+[3] FastAPI I18n Step by Step https://phrase.com/blog/posts/fastapi-i18n/
+[4] FastAPI template Arabic translation render from right to left https://stackoverflow.com/questions/79313275/fastapi-template-arabic-translation-render-from-right-to-left
+[5] How to create multilingual web pages with fastapi-babel? https://stackoverflow.com/questions/74958699/how-to-create-multilingual-web-pages-with-fastapi-babel
+[6] GIScience/fastapi-i18n https://github.com/GIScience/fastapi-i18n
+[7] Multilingual APIs: Internationalization and Localization Best ... https://python.plainenglish.io/multilingual-apis-internationalization-and-localization-best-practices-in-python-and-fastapi-aeff29d3eacd
+[8] Support for Arabic Language #381 - remsky/Kokoro-FastAPI https://github.com/remsky/Kokoro-FastAPI/issues/381

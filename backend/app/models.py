@@ -1,6 +1,6 @@
-# backend/app/models.py - Modelos Completos
+# backend/app/models.py - Multi-Tenant Commercial Models
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum, ForeignKey, Float, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -8,10 +8,35 @@ import enum
 
 Base = declarative_base()
 
+class SubscriptionTier(enum.Enum):
+    BASIC = "basic"
+    COMPLETE = "complete"
+
+class SubscriptionStatus(enum.Enum):
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    SUSPENDED = "suspended"
+    TRIAL = "trial"
+
+class InvoiceStatus(enum.Enum):
+    PENDING = "pending"
+    PAID = "paid"
+    OVERDUE = "overdue"
+    CANCELLED = "cancelled"
+
+class LanguagePreference(enum.Enum):
+    ENGLISH = "en"
+    FRENCH = "fr"
+    ARABIC = "ar"
+
 class UserRole(enum.Enum):
+    # Commercial roles (active)
     ADMIN = "admin"
-    JUDGE = "judge"
     LAWYER = "lawyer"
+    ASSISTANT = "assistant"
+    
+    # Legacy governmental roles (deprecated, for backward compatibility)
+    JUDGE = "judge"
     CLERK = "clerk"
     CITIZEN = "citizen"
 
@@ -48,14 +73,99 @@ class SignatureStatus(enum.Enum):
     SIGNED = "signed"
     FAILED = "failed"
 
+class Firm(Base):
+    __tablename__ = "firms"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    phone = Column(String(50))
+    address = Column(Text)
+    
+    # Subscription fields
+    subscription_tier = Column(Enum(SubscriptionTier), default=SubscriptionTier.BASIC, nullable=False)
+    subscription_status = Column(Enum(SubscriptionStatus), default=SubscriptionStatus.TRIAL, nullable=False)
+    subscription_start = Column(Date)
+    subscription_end = Column(Date)
+    
+    # Billing fields
+    implementation_fee_paid = Column(Boolean, default=False)
+    monthly_fee_per_lawyer = Column(Integer, default=270)
+    
+    # Preferences
+    language_preference = Column(Enum(LanguagePreference), default=LanguagePreference.FRENCH, nullable=False)
+    
+    # Limits
+    max_users = Column(Integer, default=50)
+    max_documents = Column(Integer, default=100000)
+    max_storage_gb = Column(Integer, default=500)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    users = relationship("User", back_populates="firm")
+    documents = relationship("Document", back_populates="firm")
+    expedientes = relationship("Expediente", back_populates="firm")
+    invoices = relationship("Invoice", back_populates="firm")
+    subscription = relationship("Subscription", back_populates="firm", uselist=False)
+    
+    def __repr__(self):
+        return f"<Firm(id={self.id}, name='{self.name}', status='{self.subscription_status}')>"
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    
+    firm_id = Column(Integer, ForeignKey("firms.id"), primary_key=True)
+    status = Column(Enum(SubscriptionStatus), default=SubscriptionStatus.TRIAL, nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date)
+    plan_tier = Column(Enum(SubscriptionTier), default=SubscriptionTier.BASIC, nullable=False)
+    monthly_cost = Column(Float, nullable=False)
+    next_billing_date = Column(Date)
+    auto_renew = Column(Boolean, default=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    firm = relationship("Firm", back_populates="subscription")
+    
+    def __repr__(self):
+        return f"<Subscription(firm_id={self.firm_id}, status='{self.status}', tier='{self.plan_tier}')>"
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False)
+    invoice_number = Column(String(50), unique=True, nullable=False)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(3), default="MAD")
+    invoice_date = Column(Date, nullable=False)
+    due_date = Column(Date, nullable=False)
+    status = Column(Enum(InvoiceStatus), default=InvoiceStatus.PENDING, nullable=False)
+    description = Column(Text)
+    paid_date = Column(Date)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    firm = relationship("Firm", back_populates="invoices")
+    
+    def __repr__(self):
+        return f"<Invoice(id={self.id}, invoice_number='{self.invoice_number}', status='{self.status}')>"
+
 class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True, index=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     name = Column(String(255), nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole), default=UserRole.CITIZEN, nullable=False)
+    role = Column(Enum(UserRole), default=UserRole.LAWYER, nullable=False)
+    language = Column(Enum(LanguagePreference), default=LanguagePreference.FRENCH)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     totp_secret = Column(String(32), nullable=True)
@@ -63,43 +173,52 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
-    cases = relationship("Case", foreign_keys="Case.owner_id", back_populates="owner")
+    firm = relationship("Firm", back_populates="users")
+    expedientes = relationship("Expediente", foreign_keys="Expediente.owner_id", back_populates="owner")
     documents = relationship("Document", back_populates="uploaded_by_user")
     audit_logs = relationship("AuditLog", back_populates="user")
     
     def __repr__(self):
-        return f"<User(id={self.id}, email='{self.email}', role='{self.role}')>"
+        return f"<User(id={self.id}, email='{self.email}', role='{self.role}', firm_id={self.firm_id})>"
 
-class Case(Base):
-    __tablename__ = "cases"
+class Expediente(Base):
+    __tablename__ = "expedientes"
     
     id = Column(Integer, primary_key=True, index=True)
-    case_number = Column(String(100), unique=True, index=True, nullable=False)
-    title = Column(String(500), nullable=False)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False, index=True)
+    expediente_number = Column(String(100), index=True, nullable=False)
+    client_name = Column(String(500), nullable=False)
+    matter_type = Column(Enum(CaseType), default=CaseType.CIVIL, nullable=False)
     description = Column(Text)
     status = Column(Enum(CaseStatus), default=CaseStatus.PENDING, nullable=False)
+    priority = Column(Enum(Priority), default=Priority.MEDIUM)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    assigned_judge_id = Column(Integer, ForeignKey("users.id"))
+    assigned_lawyer_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    owner = relationship("User", foreign_keys=[owner_id], back_populates="cases")
-    assigned_judge = relationship("User", foreign_keys=[assigned_judge_id])
-    documents = relationship("Document", back_populates="case")
+    firm = relationship("Firm", back_populates="expedientes")
+    owner = relationship("User", foreign_keys=[owner_id], back_populates="expedientes")
+    assigned_lawyer = relationship("User", foreign_keys=[assigned_lawyer_id])
+    documents = relationship("Document", back_populates="expediente")
     
     def __repr__(self):
-        return f"<Case(id={self.id}, case_number='{self.case_number}', status='{self.status}')>"
+        return f"<Expediente(id={self.id}, expediente_number='{self.expediente_number}', client='{self.client_name}', firm_id={self.firm_id})>"
+
+# Legacy alias for backward compatibility during migration
+Case = Expediente
 
 class Document(Base):
     __tablename__ = "documents"
     
     id = Column(Integer, primary_key=True, index=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False, index=True)
     filename = Column(String(500), nullable=False)
     file_path = Column(String(1000), nullable=False)
     file_size = Column(Integer)
     mime_type = Column(String(100))
-    case_id = Column(Integer, ForeignKey("cases.id"))
+    expediente_id = Column(Integer, ForeignKey("expedientes.id"))
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     ocr_processed = Column(Boolean, default=False)
     ocr_text = Column(Text)
@@ -111,16 +230,18 @@ class Document(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
-    case = relationship("Case", back_populates="documents")
+    firm = relationship("Firm", back_populates="documents")
+    expediente = relationship("Expediente", back_populates="documents")
     uploaded_by_user = relationship("User", back_populates="documents")
     
     def __repr__(self):
-        return f"<Document(id={self.id}, filename='{self.filename}')>"
+        return f"<Document(id={self.id}, filename='{self.filename}', firm_id={self.firm_id})>"
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     
     id = Column(Integer, primary_key=True, index=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     action = Column(String(100), nullable=False)
     resource_type = Column(String(100))
@@ -135,4 +256,4 @@ class AuditLog(Base):
     user = relationship("User", back_populates="audit_logs")
     
     def __repr__(self):
-        return f"<AuditLog(id={self.id}, action='{self.action}', user_id={self.user_id})>"
+        return f"<AuditLog(id={self.id}, action='{self.action}', user_id={self.user_id}, firm_id={self.firm_id})>"

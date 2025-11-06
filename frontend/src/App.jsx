@@ -14,6 +14,7 @@ import DocumentsList from './components/DocumentsList';
 import UsersList from './components/UsersList';
 import Settings from './components/Settings';
 import Audit from './pages/Audit';
+import BillingDashboard from './components/BillingDashboard';
 import PrivateRoute from './components/PrivateRoute';
 import { useTranslation } from 'react-i18next';
 
@@ -120,6 +121,16 @@ function AppContent() {
             <PrivateRoute requiredRoles={['admin', 'clerk']}>
               <Layout onToggleTheme={toggleTheme} mode={mode}>
                 <Audit />
+              </Layout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/facturation"
+          element={
+            <PrivateRoute requiredRoles={['admin']}>
+              <Layout onToggleTheme={toggleTheme} mode={mode}>
+                <BillingDashboard />
               </Layout>
             </PrivateRoute>
           }

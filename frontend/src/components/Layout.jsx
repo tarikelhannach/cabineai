@@ -32,6 +32,7 @@ import {
   Assessment as AuditIcon,
   NavigateNext as NavigateNextIcon,
   Home as HomeIcon,
+  AttachMoney as BillingIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -77,6 +78,7 @@ const Layout = ({ children, onToggleTheme, mode }) => {
 
   const allMenuItems = [
     { text: t('navigation.dashboard'), icon: <DashboardIcon />, path: '/', roles: ['admin', 'judge', 'lawyer', 'clerk', 'citizen'] },
+    { text: t('billing.title'), icon: <BillingIcon />, path: '/facturation', roles: ['admin'] },
     { text: t('navigation.cases'), icon: <GavelIcon />, path: '/casos', roles: ['admin', 'judge', 'lawyer', 'clerk', 'citizen'] },
     { text: t('navigation.documents'), icon: <DescriptionIcon />, path: '/documentos', roles: ['admin', 'judge', 'lawyer', 'clerk', 'citizen'] },
     { text: t('navigation.users'), icon: <PeopleIcon />, path: '/usuarios', roles: ['admin', 'clerk'] },
@@ -91,6 +93,7 @@ const Layout = ({ children, onToggleTheme, mode }) => {
     
     const routes = {
       '': { label: t('navigation.dashboard'), icon: <HomeIcon sx={{ fontSize: 20 }} /> },
+      'facturation': { label: t('billing.title'), icon: <BillingIcon sx={{ fontSize: 20 }} /> },
       'casos': { label: t('navigation.cases'), icon: <GavelIcon sx={{ fontSize: 20 }} /> },
       'documentos': { label: t('navigation.documents'), icon: <DescriptionIcon sx={{ fontSize: 20 }} /> },
       'usuarios': { label: t('navigation.users'), icon: <PeopleIcon sx={{ fontSize: 20 }} /> },

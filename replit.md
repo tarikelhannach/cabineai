@@ -1,7 +1,7 @@
 # JusticeAI Commercial - Multi-Tenant SaaS Platform
 
 ### Overview
-This project is a multi-tenant SaaS platform for law firms, transformed from the governmental JusticeAI system. It features a FastAPI backend and React frontend designed for commercial use by 600+ independent law firms. Key capabilities include complete tenant isolation (firm-based), subscription billing management, document digitization with OCR (50K pages), multi-language support (French, Arabic, English with RTL), and secure case (expediente) management. The platform uses a subscription model with implementation fees (20-30K MAD) and monthly per-lawyer fees (270 MAD).
+This project is a multi-tenant SaaS platform for law firms, transformed from the governmental JusticeAI system. It features a FastAPI backend (port 8000) and React frontend (port 5000) designed for commercial use by 600+ independent law firms. Key capabilities include complete tenant isolation (firm-based), subscription billing management with modern billing dashboard, document digitization with OCR (50K pages using QARI-OCR/EasyOCR/Tesseract), multi-language support (French, Arabic, English with RTL), and secure case (expediente) management. The platform uses a subscription model with implementation fees (20,600-30,600 MAD) and monthly per-lawyer fees (270-405 MAD).
 
 ### User Preferences
 - **Languages**: Multi-language support (French as default, Arabic, English) - Spanish removed for commercial version

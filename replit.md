@@ -44,11 +44,62 @@ The frontend features a modern, responsive design with a purple gradient theme, 
 - **Audit Logging**: Comprehensive logging of all user actions in PostgreSQL for security and compliance.
 - **Rate Limiting**: Implemented with SlowAPI to prevent brute force attacks and spam.
 
+#### Artificial Intelligence Architecture (Planned)
+**Critical Requirement**: ALL documents are in Arabic, requiring LLM with excellent Arabic language understanding.
+
+**Selected LLM**: **GPT-4o** (OpenAI/Azure)
+- **Reasoning**: Best-in-class Arabic language performance, multimodal capabilities, 200K context window
+- **Deployment Strategy**:
+  - **Phase 1 (MVP)**: OpenAI API with Zero Data Retention contract
+  - **Phase 2 (Production)**: Azure OpenAI Service (France Central region for GDPR compliance)
+  - **Phase 3 (Enterprise)**: Hybrid model (Azure OpenAI + on-premise for ultra-sensitive cases)
+
+**AI Capabilities** (To be implemented):
+1. **Automatic Document Classification**:
+   - OCR extraction → GPT-4o analysis
+   - Classifies: document type, legal area, parties involved, important dates, urgency level
+   - Saves 95% of time (10 min → 30 sec per document)
+
+2. **Intelligent Chat (RAG)**:
+   - Natural language search across all documents and cases
+   - Multi-language support (Arabic, French, English)
+   - Semantic search with embeddings (OpenAI text-embedding-3-large)
+   - Answers with source citations
+
+3. **Legal Document Drafting Assistant**:
+   - Generates drafts: meeting minutes, demands, contracts, powers of attorney
+   - Arabic-language templates following Moroccan legal standards
+   - Review and edit workflow for lawyer approval
+
+4. **Semantic Search**:
+   - Concept-based search (not just keywords)
+   - Finds similar cases and legal precedents
+   - Cross-lingual understanding
+
+**Security Measures for AI**:
+- **Zero Data Retention**: 0-day retention policy with LLM providers
+- **Data Anonymization**: PII removed before sending to LLM
+- **Tenant Isolation**: Hard-coded firm_id filtering in vector database queries
+- **Prompt Injection Protection**: Input sanitization, system prompt locking
+- **Hallucination Mitigation**: RAG-only responses, mandatory citations, human review for critical documents
+- **Incident Response**: Automated detection and 4-phase response workflow
+- **Compliance**: GDPR-compliant with Azure OpenAI (EU data residency)
+
+**Technical Specifications**:
+- **Cost**: ~$4,180/month for 600 firms (Azure OpenAI in France Central)
+- **Latency**: P50: 2.5 seconds, P95: 5.8 seconds
+- **Throughput**: 100K tokens per minute (with Azure quota)
+- **Data Residency**: France Central (EU) for compliance
+- **Staffing**: 1 FTE DevOps + Azure Admin
+
+**Documentation**: See `JUSTICEAI_COMMERCIAL_TECHNICAL_SPECIFICATION.md` for complete technical details, security analysis, cost models, and implementation roadmap.
+
 #### System Design Choices
 - **Microservices-oriented**: Clear separation between frontend and backend.
 - **Scalability**: Configured for Autoscale deployment.
 - **Security-first**: Emphasizes JWT, RBAC, field-level permissions, deny-by-default, and rate limiting.
 - **Localization**: Robust multi-language and RTL support.
+- **AI-Enhanced**: Planned integration of GPT-4o for document classification, intelligent search, and drafting assistance.
 
 ### External Dependencies
 

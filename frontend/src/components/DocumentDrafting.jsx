@@ -6,6 +6,7 @@ import {
   Alert
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 const DOCUMENT_TYPES = [
@@ -26,6 +27,7 @@ const STATUS_COLORS = {
 
 function DocumentDrafting() {
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -142,15 +144,17 @@ function DocumentDrafting() {
         </Alert>
       )}
 
-      <Box sx={{ mb: 3 }}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => setGenerateDialogOpen(true)}
-        >
-          {t('Generate New Document')}
-        </Button>
-      </Box>
+      {(user?.role === 'admin' || user?.role === 'lawyer') && (
+        <Box sx={{ mb: 3 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setGenerateDialogOpen(true)}
+          >
+            {t('Generate New Document')}
+          </Button>
+        </Box>
+      )}
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -305,28 +309,32 @@ function DocumentDrafting() {
               )}
             </DialogContent>
             <DialogActions>
-              {selectedDocument.status === 'draft' && (
-                <Button
-                  onClick={() => handleUpdateStatus(selectedDocument.id, 'reviewed')}
-                  color="info"
-                >
-                  {t('Mark as Reviewed')}
-                </Button>
-              )}
-              {selectedDocument.status === 'reviewed' && (
+              {(user?.role === 'admin' || user?.role === 'lawyer') && (
                 <>
-                  <Button
-                    onClick={() => handleUpdateStatus(selectedDocument.id, 'approved')}
-                    color="success"
-                  >
-                    {t('Approve')}
-                  </Button>
-                  <Button
-                    onClick={() => handleUpdateStatus(selectedDocument.id, 'rejected')}
-                    color="error"
-                  >
-                    {t('Reject')}
-                  </Button>
+                  {selectedDocument.status === 'draft' && (
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedDocument.id, 'reviewed')}
+                      color="info"
+                    >
+                      {t('Mark as Reviewed')}
+                    </Button>
+                  )}
+                  {selectedDocument.status === 'reviewed' && (
+                    <>
+                      <Button
+                        onClick={() => handleUpdateStatus(selectedDocument.id, 'approved')}
+                        color="success"
+                      >
+                        {t('Approve')}
+                      </Button>
+                      <Button
+                        onClick={() => handleUpdateStatus(selectedDocument.id, 'rejected')}
+                        color="error"
+                      >
+                        {t('Reject')}
+                      </Button>
+                    </>
+                  )}
                 </>
               )}
               <Button onClick={() => setViewDialogOpen(false)}>

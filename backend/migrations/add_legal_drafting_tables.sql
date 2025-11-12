@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS generated_documents (
     
     -- User input and AI metadata
     user_input TEXT,  -- Original user prompt/parameters
-    metadata TEXT,  -- JSON with placeholders filled, generation params
+    generation_metadata TEXT,  -- JSON with placeholders filled, generation params
     model_used VARCHAR(50) DEFAULT 'gpt-4o',
     generation_time_seconds FLOAT,
     

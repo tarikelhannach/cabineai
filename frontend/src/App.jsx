@@ -150,7 +150,7 @@ function AppContent() {
         <Route
           path="/drafting"
           element={
-            <PrivateRoute requiredRoles={['admin', 'lawyer']}>
+            <PrivateRoute requiredRoles={['admin', 'lawyer', 'assistant']}>
               <Layout onToggleTheme={toggleTheme} mode={mode}>
                 <DocumentDrafting />
               </Layout>

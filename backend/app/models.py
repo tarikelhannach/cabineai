@@ -74,6 +74,21 @@ class SignatureStatus(enum.Enum):
     SIGNED = "signed"
     FAILED = "failed"
 
+class LegalDocumentType(enum.Enum):
+    ACTA = "acta"
+    DEMANDA = "demanda"
+    CONTRATO = "contrato"
+    PODER = "poder"
+    ESCRITO = "escrito"
+    DICTAMEN = "dictamen"
+    OTHER = "other"
+
+class DraftStatus(enum.Enum):
+    DRAFT = "draft"
+    REVIEWED = "reviewed"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
 class Firm(Base):
     __tablename__ = "firms"
     
@@ -348,3 +363,80 @@ class DocumentEmbedding(Base):
     
     def __repr__(self):
         return f"<DocumentEmbedding(id={self.id}, document_id={self.document_id}, chunk_index={self.chunk_index})>"
+
+class DocumentTemplate(Base):
+    __tablename__ = "document_templates"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False, index=True)
+    
+    template_type = Column(Enum(LegalDocumentType), nullable=False, index=True)
+    name = Column(String(500), nullable=False)
+    description = Column(Text)
+    template_content = Column(Text, nullable=False)  # Arabic template with {{placeholders}}
+    placeholders = Column(Text)  # JSON array of placeholder names and descriptions
+    
+    is_default = Column(Boolean, default=False)  # System-provided templates
+    is_active = Column(Boolean, default=True)
+    
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    creator = relationship("User")
+    generated_documents = relationship("GeneratedDocument", back_populates="template")
+    
+    __table_args__ = (
+        Index('ix_document_templates_firm_id_type', 'firm_id', 'template_type'),
+    )
+    
+    def __repr__(self):
+        return f"<DocumentTemplate(id={self.id}, firm_id={self.firm_id}, type='{self.template_type}', name='{self.name}')>"
+
+class GeneratedDocument(Base):
+    __tablename__ = "generated_documents"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False, index=True)
+    template_id = Column(Integer, ForeignKey("document_templates.id"), nullable=True, index=True)
+    expediente_id = Column(Integer, ForeignKey("expedientes.id"), nullable=True, index=True)
+    
+    document_type = Column(Enum(LegalDocumentType), nullable=False, index=True)
+    title = Column(String(500), nullable=False)
+    content = Column(Text, nullable=False)  # Generated Arabic document
+    
+    status = Column(Enum(DraftStatus), default=DraftStatus.DRAFT, nullable=False, index=True)
+    
+    # User input and AI metadata
+    user_input = Column(Text)  # Original user prompt/parameters
+    metadata = Column(Text)  # JSON with placeholders filled, generation params
+    model_used = Column(String(50), default="gpt-4o")
+    generation_time_seconds = Column(Float)
+    
+    # Workflow tracking
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    review_notes = Column(Text)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    template = relationship("DocumentTemplate", back_populates="generated_documents")
+    creator = relationship("User", foreign_keys=[created_by])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+    approver = relationship("User", foreign_keys=[approved_by])
+    expediente = relationship("Expediente")
+    
+    __table_args__ = (
+        Index('ix_generated_documents_firm_id_status', 'firm_id', 'status'),
+        Index('ix_generated_documents_firm_id_created_by', 'firm_id', 'created_by'),
+    )
+    
+    def __repr__(self):
+        return f"<GeneratedDocument(id={self.id}, firm_id={self.firm_id}, type='{self.document_type}', status='{self.status}')>"

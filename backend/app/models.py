@@ -1,9 +1,10 @@
 # backend/app/models.py - Multi-Tenant Commercial Models
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum, ForeignKey, Float, Date
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum, ForeignKey, Float, Date, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from pgvector.sqlalchemy import Vector
 import enum
 
 Base = declarative_base()
@@ -286,3 +287,64 @@ class DocumentClassification(Base):
     
     def __repr__(self):
         return f"<DocumentClassification(id={self.id}, document_id={self.document_id}, document_type='{self.document_type}')>"
+
+class ChatConversation(Base):
+    __tablename__ = "chat_conversations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    title = Column(String(500), nullable=False)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    messages = relationship("ChatMessage", back_populates="conversation", cascade="all, delete-orphan")
+    user = relationship("User")
+    
+    def __repr__(self):
+        return f"<ChatConversation(id={self.id}, firm_id={self.firm_id}, title='{self.title}')>"
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("chat_conversations.id"), nullable=False, index=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False, index=True)
+    
+    role = Column(String(50), nullable=False)  # 'user' or 'assistant'
+    content = Column(Text, nullable=False)
+    sources = Column(Text)  # JSON array of document references
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    conversation = relationship("ChatConversation", back_populates="messages")
+    
+    def __repr__(self):
+        return f"<ChatMessage(id={self.id}, conversation_id={self.conversation_id}, role='{self.role}')>"
+
+class DocumentEmbedding(Base):
+    __tablename__ = "document_embeddings"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False, index=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False, index=True)
+    
+    chunk_text = Column(Text, nullable=False)
+    chunk_index = Column(Integer, nullable=False)
+    embedding = Column(Vector(1536))  # text-embedding-3-large with dimensions=1536 (optimized for pgvector)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    document = relationship("Document")
+    
+    __table_args__ = (
+        Index('ix_document_embeddings_firm_id_document_id', 'firm_id', 'document_id'),
+    )
+    
+    def __repr__(self):
+        return f"<DocumentEmbedding(id={self.id}, document_id={self.document_id}, chunk_index={self.chunk_index})>"

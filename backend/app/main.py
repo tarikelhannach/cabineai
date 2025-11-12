@@ -164,7 +164,7 @@ app.add_middleware(TenantMiddleware)
 app.add_middleware(LanguageMiddleware)
 
 # Include routers
-from .routes import auth, cases, documents, users, audit, search, signatures, billing, ai_classification, chat
+from .routes import auth, cases, documents, users, audit, search, signatures, billing, ai_classification, chat, drafting
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(billing.router, prefix="/api")  # Billing routes for SaaS
@@ -176,6 +176,7 @@ app.include_router(search.router)
 app.include_router(signatures.router)
 app.include_router(ai_classification.router)  # AI Classification with GPT-4o
 app.include_router(chat.router)  # Chat RAG with GPT-4o
+app.include_router(drafting.router)  # Legal Document Drafting with GPT-4o
 
 # Global exception handler
 @app.exception_handler(Exception)

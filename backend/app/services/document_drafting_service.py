@@ -13,7 +13,7 @@ from sqlalchemy.sql import func
 from datetime import datetime
 from openai import OpenAI
 
-from backend.app.models import (
+from ..models import (
     DocumentTemplate, GeneratedDocument, LegalDocumentType, DraftStatus, User
 )
 
@@ -137,7 +137,7 @@ class DocumentDraftingService:
             content=enhanced_content,
             status=DraftStatus.DRAFT,
             user_input=json.dumps(placeholders, ensure_ascii=False),
-            metadata=json.dumps({
+            generation_metadata=json.dumps({
                 "placeholders": placeholders,
                 "additional_instructions": additional_instructions,
                 "template_name": template.name
@@ -245,7 +245,7 @@ class DocumentDraftingService:
             content=content,
             status=DraftStatus.DRAFT,
             user_input=user_prompt,
-            metadata=json.dumps({
+            generation_metadata=json.dumps({
                 "context": context,
                 "generation_method": "free_prompt"
             }, ensure_ascii=False),

@@ -410,7 +410,7 @@ class GeneratedDocument(Base):
     
     # User input and AI metadata
     user_input = Column(Text)  # Original user prompt/parameters
-    metadata = Column(Text)  # JSON with placeholders filled, generation params
+    generation_metadata = Column(Text)  # JSON with placeholders filled, generation params
     model_used = Column(String(50), default="gpt-4o")
     generation_time_seconds = Column(Float)
     

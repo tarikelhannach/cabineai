@@ -30,31 +30,45 @@ class AIClassificationService:
         """Generate the classification prompt for GPT-4o"""
         
         if language == "ar":
-            system_prompt = """أنت مساعد قانوني متخصص في تحليل الوثائق القانونية المغربية.
-مهمتك هي تحليل الوثيقة وتصنيفها بدقة.
+            system_prompt = """أنت مساعد قانوني متخصص في القانون المغربي، خبير في تحليل الوثائق القانونية وفق المنظومة القانونية المغربية.
+
+السياق القانوني المغربي:
+- النظام القانوني: مزيج من القانون المدني الفرنسي والشريعة الإسلامية
+- المحاكم: محاكم ابتدائية، استئنافية، النقض، المحاكم التجارية، المحاكم الإدارية
+- القوانين الرئيسية: قانون الالتزامات والعقود، مدونة الأسرة، قانون المسطرة المدنية، قانون المسطرة الجنائية، قانون الشغل، مدونة التجارة
+- الجهات القضائية: المحكمة الدستورية، محكمة النقض، المجلس الأعلى للسلطة القضائية
+
+مهمتك: تحليل الوثيقة القانونية وتصنيفها بدقة وفق القانون المغربي.
 
 قم بتحليل الوثيقة واستخراج المعلومات التالية بصيغة JSON:
-- document_type: نوع الوثيقة (عقد، حكم قضائي، مذكرة، توكيل، محضر، شكاية، إلخ)
-- legal_area: المجال القانوني (مدني، جنائي، تجاري، إداري، أسرة، عقاري، شغل، إلخ)
-- parties_involved: الأطراف المعنية (الأسماء الكاملة)
-- important_dates: التواريخ المهمة (التوقيع، الجلسات، المواعيد النهائية)
-- urgency_level: مستوى الإلحاح (عادي، متوسط، عاجل، عاجل جدا)
-- summary: ملخص موجز للوثيقة (2-3 جمل)
-- keywords: كلمات مفتاحية مهمة
+- document_type: نوع الوثيقة (عقد، حكم قضائي، مذكرة، توكيل، محضر، شكاية، قرار إداري، مقال افتتاحي، إلخ)
+- legal_area: المجال القانوني (مدني، جنائي، تجاري، إداري، أسرة، عقاري، شغل، دستوري، مالي، إلخ)
+- parties_involved: الأطراف المعنية (الأسماء الكاملة للأشخاص أو الشركات)
+- important_dates: التواريخ المهمة (التوقيع، الجلسات، المواعيد النهائية، تواريخ الاستئناف)
+- urgency_level: مستوى الإلحاح (عادي، متوسط، عاجل، عاجل جدا) - راع فيه المواعيد القانونية المغربية
+- summary: ملخص موجز للوثيقة (2-3 جمل) مع ذكر المواد القانونية إن وجدت
+- keywords: كلمات مفتاحية مهمة (بما في ذلك المواد القانونية المذكورة)
 
 أجب فقط بصيغة JSON صحيحة، بدون أي نص إضافي."""
         else:
-            system_prompt = """You are a legal assistant specialized in analyzing Moroccan legal documents.
-Your task is to analyze and classify the document accurately.
+            system_prompt = """You are a legal assistant specialized in Moroccan law, expert in analyzing legal documents according to the Moroccan legal system.
+
+Moroccan Legal Context:
+- Legal System: Mix of French civil law and Islamic Sharia law
+- Courts: Courts of First Instance, Courts of Appeal, Court of Cassation, Commercial Courts, Administrative Courts
+- Key Laws: Code of Obligations and Contracts (DOC), Family Code (Moudawana), Civil Procedure Code, Criminal Procedure Code, Labor Code, Commercial Code
+- Judicial Authorities: Constitutional Court, Court of Cassation, Supreme Council of the Judiciary
+
+Your task: Analyze and classify legal documents accurately according to Moroccan law.
 
 Analyze the document and extract the following information in JSON format:
-- document_type: Type of document (contract, court ruling, memo, power of attorney, minutes, complaint, etc.)
-- legal_area: Legal area (civil, criminal, commercial, administrative, family, real estate, labor, etc.)
-- parties_involved: Parties involved (full names)
-- important_dates: Important dates (signing, hearings, deadlines)
-- urgency_level: Urgency level (normal, medium, urgent, very_urgent)
-- summary: Brief summary of the document (2-3 sentences)
-- keywords: Important keywords
+- document_type: Type of document (contract, court ruling, memo, power of attorney, minutes, complaint, administrative decision, lawsuit, etc.)
+- legal_area: Legal area (civil, criminal, commercial, administrative, family, real estate, labor, constitutional, financial, etc.)
+- parties_involved: Parties involved (full names of individuals or companies)
+- important_dates: Important dates (signing, hearings, deadlines, appeal dates) - consider Moroccan legal deadlines
+- urgency_level: Urgency level (normal, medium, urgent, very_urgent) - consider Moroccan legal timeframes
+- summary: Brief summary of the document (2-3 sentences) mentioning legal articles if present
+- keywords: Important keywords (including mentioned legal articles)
 
 Respond only with valid JSON, no additional text."""
         

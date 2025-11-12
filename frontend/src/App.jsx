@@ -15,6 +15,7 @@ import UsersList from './components/UsersList';
 import Settings from './components/Settings';
 import Audit from './pages/Audit';
 import BillingDashboard from './components/BillingDashboard';
+import Chat from './components/Chat';
 import PrivateRoute from './components/PrivateRoute';
 import { useTranslation } from 'react-i18next';
 
@@ -131,6 +132,16 @@ function AppContent() {
             <PrivateRoute requiredRoles={['admin']}>
               <Layout onToggleTheme={toggleTheme} mode={mode}>
                 <BillingDashboard />
+              </Layout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <PrivateRoute requiredRoles={['admin', 'lawyer', 'assistant']}>
+              <Layout onToggleTheme={toggleTheme} mode={mode}>
+                <Chat />
               </Layout>
             </PrivateRoute>
           }

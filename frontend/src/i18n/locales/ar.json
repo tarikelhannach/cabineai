@@ -284,5 +284,23 @@
     "processing_time": "وقت المعالجة",
     "model": "مصنف بواسطة",
     "confidence": "ثقة"
+  },
+  "chat": {
+    "title": "محادثة ذكية",
+    "conversations": "المحادثات",
+    "messages": "رسائل",
+    "new_conversation": "محادثة جديدة",
+    "conversation_title": "عنوان المحادثة",
+    "select_conversation": "اختر محادثة",
+    "start_conversation": "ابدأ محادثة جديدة",
+    "type_message": "اكتب رسالتك...",
+    "you": "أنت",
+    "ai_assistant": "المساعد الذكي",
+    "sources": "المصادر",
+    "error_loading_conversations": "خطأ في تحميل المحادثات",
+    "error_loading_messages": "خطأ في تحميل الرسائل",
+    "error_creating_conversation": "خطأ في إنشاء المحادثة",
+    "error_sending_message": "خطأ في إرسال الرسالة",
+    "api_key_not_configured": "مفتاح OpenAI API غير مكوّن. يرجى الاتصال بالمسؤول."
   }
 }

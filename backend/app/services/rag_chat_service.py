@@ -24,17 +24,39 @@ class RAGChatService:
     """Service for RAG-powered chat with semantic document search."""
     
     def __init__(self):
-        """Initialize OpenAI client and embedding service."""
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "OPENAI_API_KEY not configured. Please add your OpenAI API key to secrets."
-            )
-        self.client = OpenAI(api_key=api_key)
+        """Initialize service (OpenAI client loaded lazily when needed)."""
+        self._client = None
+        self._embedding_service = None
         self.model = "gpt-4o"
-        self.embedding_service = EmbeddingService()
         self.max_context_chunks = 5  # Number of relevant chunks to include
         self.max_history_messages = 6  # Previous messages to include for context
+    
+    def _ensure_openai_client(self):
+        """Lazy-load OpenAI client (only when needed for AI operations)."""
+        if self._client is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "OPENAI_API_KEY not configured. Please add your OpenAI API key to secrets."
+                )
+            self._client = OpenAI(api_key=api_key)
+        return self._client
+    
+    def _ensure_embedding_service(self):
+        """Lazy-load embedding service (only when needed for RAG operations)."""
+        if self._embedding_service is None:
+            self._embedding_service = EmbeddingService()
+        return self._embedding_service
+    
+    @property
+    def client(self):
+        """Get OpenAI client (lazy-loaded)."""
+        return self._ensure_openai_client()
+    
+    @property
+    def embedding_service(self):
+        """Get embedding service (lazy-loaded)."""
+        return self._ensure_embedding_service()
     
     def semantic_search(
         self,

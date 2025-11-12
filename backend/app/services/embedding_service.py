@@ -18,17 +18,28 @@ class EmbeddingService:
     """Service for generating and managing document embeddings for semantic search."""
     
     def __init__(self):
-        """Initialize OpenAI client for embeddings."""
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "OPENAI_API_KEY not configured. Please add your OpenAI API key to secrets."
-            )
-        self.client = OpenAI(api_key=api_key)
+        """Initialize service (OpenAI client loaded lazily when needed)."""
+        self._client = None
         self.model = "text-embedding-3-large"
         self.dimensions = 1536  # Optimized for pgvector HNSW index
         self.chunk_size = 500  # Words per chunk
         self.chunk_overlap = 50  # Words overlap between chunks
+    
+    def _ensure_openai_client(self):
+        """Lazy-load OpenAI client (only when needed for embedding operations)."""
+        if self._client is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "OPENAI_API_KEY not configured. Please add your OpenAI API key to secrets."
+                )
+            self._client = OpenAI(api_key=api_key)
+        return self._client
+    
+    @property
+    def client(self):
+        """Get OpenAI client (lazy-loaded)."""
+        return self._ensure_openai_client()
     
     def chunk_text(self, text: str) -> List[str]:
         """

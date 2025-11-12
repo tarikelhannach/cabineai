@@ -325,5 +325,23 @@
     "processing_time": "Temps de Traitement",
     "model": "Classifié avec",
     "confidence": "confiance"
+  },
+  "chat": {
+    "title": "Chat Intelligent",
+    "conversations": "Conversations",
+    "messages": "messages",
+    "new_conversation": "Nouvelle Conversation",
+    "conversation_title": "Titre de la conversation",
+    "select_conversation": "Sélectionnez une conversation",
+    "start_conversation": "Commencez une nouvelle conversation",
+    "type_message": "Tapez votre message...",
+    "you": "Vous",
+    "ai_assistant": "Assistant IA",
+    "sources": "Sources",
+    "error_loading_conversations": "Erreur lors du chargement des conversations",
+    "error_loading_messages": "Erreur lors du chargement des messages",
+    "error_creating_conversation": "Erreur lors de la création de la conversation",
+    "error_sending_message": "Erreur lors de l'envoi du message",
+    "api_key_not_configured": "Clé API OpenAI non configurée. Veuillez contacter votre administrateur."
   }
 }

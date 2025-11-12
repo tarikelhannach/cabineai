@@ -116,5 +116,23 @@
     "processing_time": "Processing Time",
     "model": "Classified with",
     "confidence": "confidence"
+  },
+  "chat": {
+    "title": "Intelligent Chat",
+    "conversations": "Conversations",
+    "messages": "messages",
+    "new_conversation": "New Conversation",
+    "conversation_title": "Conversation title",
+    "select_conversation": "Select a conversation",
+    "start_conversation": "Start a new conversation",
+    "type_message": "Type your message...",
+    "you": "You",
+    "ai_assistant": "AI Assistant",
+    "sources": "Sources",
+    "error_loading_conversations": "Error loading conversations",
+    "error_loading_messages": "Error loading messages",
+    "error_creating_conversation": "Error creating conversation",
+    "error_sending_message": "Error sending message",
+    "api_key_not_configured": "OpenAI API key not configured. Please contact your administrator."
   }
 }

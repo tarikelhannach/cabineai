@@ -12,6 +12,7 @@ from typing import List, Dict, Any
 from openai import OpenAI, OpenAIError
 from sqlalchemy.orm import Session
 from app.models import Document, DocumentEmbedding
+from app.services.cache_service import cache_service
 
 
 class EmbeddingService:
@@ -64,7 +65,7 @@ class EmbeddingService:
     
     def generate_embedding(self, text: str) -> List[float]:
         """
-        Generate embedding vector for a single text chunk.
+        Generate embedding vector for a single text chunk with caching.
         
         Args:
             text: Text to embed
@@ -75,13 +76,19 @@ class EmbeddingService:
         Raises:
             Exception: If OpenAI API call fails
         """
+        cached = cache_service.get_embedding(text, self.model)
+        if cached is not None:
+            return cached
+        
         try:
             response = self.client.embeddings.create(
                 model=self.model,
                 input=text,
                 dimensions=self.dimensions
             )
-            return response.data[0].embedding
+            embedding = response.data[0].embedding
+            cache_service.set_embedding(text, embedding, self.model)
+            return embedding
         except OpenAIError as e:
             raise Exception(f"OpenAI API error: {str(e)}")
     

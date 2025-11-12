@@ -11,6 +11,7 @@ from openai import OpenAI, OpenAIError
 from sqlalchemy.orm import Session
 
 from app.models import Document, DocumentClassification, User
+from app.services.cache_service import cache_service
 
 
 class AIClassificationService:
@@ -23,7 +24,7 @@ class AIClassificationService:
         if self.api_key:
             self.client = OpenAI(api_key=self.api_key)
         
-        self.model = "gpt-4o"
+        self.model = "gpt-4o-mini"
     
     def _get_classification_prompt(self, document_text: str, language: str = "ar") -> str:
         """Generate the classification prompt for GPT-4o"""
@@ -96,7 +97,20 @@ Respond only with valid JSON, no additional text."""
         if not document:
             raise ValueError(f"Document {document_id} not found for firm {firm_id}")
         
-        # Check if already classified
+        # Check cache first (unless force_reclassify)
+        if not force_reclassify:
+            cached_classification = cache_service.get_classification(document_id)
+            if cached_classification:
+                existing = db.query(DocumentClassification).filter(
+                    DocumentClassification.document_id == document_id,
+                    DocumentClassification.firm_id == firm_id
+                ).first()
+                if existing:
+                    return existing
+        else:
+            cache_service.invalidate_document_classification(document_id)
+        
+        # Check database
         existing = db.query(DocumentClassification).filter(
             DocumentClassification.document_id == document_id,
             DocumentClassification.firm_id == firm_id
@@ -163,6 +177,14 @@ Respond only with valid JSON, no additional text."""
             
             db.commit()
             db.refresh(classification)
+            
+            # Cache the classification result
+            cache_service.set_classification(document_id, {
+                "document_type": classification.document_type,
+                "legal_area": classification.legal_area,
+                "urgency_level": classification.urgency_level,
+                "summary": classification.summary
+            })
             
             return classification
             

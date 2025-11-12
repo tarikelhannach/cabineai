@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.models import ChatConversation, ChatMessage, DocumentEmbedding, Document
 from app.services.embedding_service import EmbeddingService
+from app.services.cache_service import cache_service
 
 
 class RAGChatService:

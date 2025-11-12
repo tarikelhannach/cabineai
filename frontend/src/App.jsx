@@ -16,6 +16,7 @@ import Settings from './components/Settings';
 import Audit from './pages/Audit';
 import BillingDashboard from './components/BillingDashboard';
 import Chat from './components/Chat';
+import DocumentDrafting from './components/DocumentDrafting';
 import PrivateRoute from './components/PrivateRoute';
 import { useTranslation } from 'react-i18next';
 
@@ -142,6 +143,16 @@ function AppContent() {
             <PrivateRoute requiredRoles={['admin', 'lawyer', 'assistant']}>
               <Layout onToggleTheme={toggleTheme} mode={mode}>
                 <Chat />
+              </Layout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/drafting"
+          element={
+            <PrivateRoute requiredRoles={['admin', 'lawyer']}>
+              <Layout onToggleTheme={toggleTheme} mode={mode}>
+                <DocumentDrafting />
               </Layout>
             </PrivateRoute>
           }

@@ -84,5 +84,5 @@ externalPort = 3003
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-c", "cd backend && gunicorn app.main:app --bind 0.0.0.0:5000 --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile -"]
+run = ["bash", "-c", "cd backend && uvicorn app.main:app --host 0.0.0.0 --port 5000 --workers 4"]
 build = ["bash", "-c", "cd frontend && npm run build && cd ../backend && pip install -r requirements.txt"]

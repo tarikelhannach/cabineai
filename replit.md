@@ -44,37 +44,52 @@ The frontend features a modern, responsive design with a purple gradient theme, 
 - **Audit Logging**: Comprehensive logging of all user actions in PostgreSQL for security and compliance.
 - **Rate Limiting**: Implemented with SlowAPI to prevent brute force attacks and spam.
 
-#### Artificial Intelligence Architecture (Planned)
+#### Artificial Intelligence Architecture (IMPLEMENTED)
 **Critical Requirement**: ALL documents are in Arabic, requiring LLM with excellent Arabic language understanding.
 
 **Selected LLM**: **GPT-4o** (OpenAI/Azure)
 - **Reasoning**: Best-in-class Arabic language performance, multimodal capabilities, 200K context window
 - **Deployment Strategy**:
-  - **Phase 1 (MVP)**: OpenAI API with Zero Data Retention contract
+  - **Phase 1 (MVP)**: OpenAI API with Zero Data Retention contract ✅ CURRENT
   - **Phase 2 (Production)**: Azure OpenAI Service (France Central region for GDPR compliance)
   - **Phase 3 (Enterprise)**: Hybrid model (Azure OpenAI + on-premise for ultra-sensitive cases)
 
-**AI Capabilities** (To be implemented):
-1. **Automatic Document Classification**:
-   - OCR extraction → GPT-4o analysis
+**AI Capabilities** (IMPLEMENTED - MVP Ready):
+1. **✅ Automatic Document Classification** (Feature #1):
+   - **Status**: IMPLEMENTED & ARCHITECT-APPROVED
+   - OCR extraction → GPT-4o analysis with lazy-loading
    - Classifies: document type, legal area, parties involved, important dates, urgency level
    - Saves 95% of time (10 min → 30 sec per document)
+   - **Implementation**: `ClassificationService` with graceful degradation (HTTP 503 when OPENAI_API_KEY missing)
+   - **Endpoints**: POST `/api/documents/{id}/classify` (lawyers/admin only)
 
-2. **Intelligent Chat (RAG)**:
+2. **✅ Intelligent Chat (RAG)** (Feature #2):
+   - **Status**: IMPLEMENTED & ARCHITECT-APPROVED
    - Natural language search across all documents and cases
    - Multi-language support (Arabic, French, English)
    - Semantic search with embeddings (OpenAI text-embedding-3-large)
-   - Answers with source citations
+   - Answers with source citations and relevance scoring
+   - **Implementation**: `RagChatService` with vector embeddings, lazy-loading, case-insensitive error detection
+   - **Database**: `chat_messages` table for conversation history with firm_id isolation
+   - **Endpoints**: POST `/api/chat/ask` (all authenticated users), GET `/api/chat/history` (conversation retrieval)
+   - **Frontend**: `/chat` route with Material-UI interface
 
-3. **Legal Document Drafting Assistant**:
-   - Generates drafts: meeting minutes, demands, contracts, powers of attorney
-   - Arabic-language templates following Moroccan legal standards
-   - Review and edit workflow for lawyer approval
+3. **✅ Legal Document Drafting Assistant** (Feature #3):
+   - **Status**: IMPLEMENTED & ARCHITECT-APPROVED
+   - Generates drafts: meeting minutes (acta), demands (demanda), contracts (contrato), powers of attorney (poder), legal briefs (escrito), opinions (dictamen)
+   - Arabic-language generation following Moroccan legal standards
+   - Review and approval workflow (draft → reviewed → approved/rejected)
+   - **Implementation**: `DocumentDraftingService` with template-based and prompt-based generation
+   - **Database**: `document_templates` and `generated_documents` tables with workflow tracking
+   - **RBAC**: Lawyers/Admin generate & approve, Assistants view-only (read-only UI)
+   - **Endpoints**: 10 CRUD + generation endpoints for templates and documents
+   - **Frontend**: `/drafting` route with role-based UI (generation disabled for assistants)
 
-4. **Semantic Search**:
+4. **Semantic Search** (Future Enhancement):
    - Concept-based search (not just keywords)
    - Finds similar cases and legal precedents
    - Cross-lingual understanding
+   - **Note**: Partially covered by RAG chat feature
 
 **Security Measures for AI**:
 - **Zero Data Retention**: 0-day retention policy with LLM providers

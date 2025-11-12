@@ -20,6 +20,7 @@ from openai import OpenAI, AsyncOpenAI, OpenAIError
 from sqlalchemy.orm import Session
 from app.models import Document, DocumentEmbedding
 from app.services.cache_service import cache_service
+from app.services.metrics_service import metrics_service, MetricType
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,22 @@ class EmbeddingService:
         """
         cached = cache_service.get_embedding(text, self.model)
         if cached is not None:
+            # Record cache hit
+            metrics_service.record_latency(
+                metric_type=MetricType.CACHE_HIT,
+                duration_seconds=0.0,
+                success=True,
+                metadata={'cache_type': 'embedding'}
+            )
             return cached
+        
+        # Record cache miss
+        metrics_service.record_latency(
+            metric_type=MetricType.CACHE_MISS,
+            duration_seconds=0.0,
+            success=True,
+            metadata={'cache_type': 'embedding'}
+        )
         
         try:
             response = self.client.embeddings.create(
@@ -207,6 +223,18 @@ class EmbeddingService:
         
         db.commit()
         processing_time = time.time() - start_time
+        
+        # Record metrics
+        metrics_service.record_latency(
+            metric_type=MetricType.EMBEDDING_SYNC,
+            duration_seconds=processing_time,
+            success=True,
+            metadata={
+                'document_id': document_id,
+                'chunks_embedded': embeddings_created,
+                'total_chunks': len(chunks)
+            }
+        )
         
         return {
             "document_id": document_id,
@@ -386,6 +414,18 @@ class EmbeddingService:
         
         db.commit()
         processing_time = time.time() - start_time
+        
+        # Record metrics
+        metrics_service.record_latency(
+            metric_type=MetricType.EMBEDDING_ASYNC,
+            duration_seconds=processing_time,
+            success=True,
+            metadata={
+                'document_id': document_id,
+                'chunks_embedded': embeddings_created,
+                'total_chunks': len(chunks)
+            }
+        )
         
         logger.info(
             f"✅ Async embedding completed: {embeddings_created}/{len(chunks)} chunks "

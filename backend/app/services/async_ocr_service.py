@@ -20,6 +20,7 @@ from PIL import Image
 from pdf2image import convert_from_path
 
 from app.services.advanced_ocr_service import AdvancedOCRService, OCREngine
+from app.services.metrics_service import metrics_service, MetricType
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,18 @@ class AsyncOCRService:
             
             processing_time = (datetime.utcnow() - start_time).total_seconds()
             
+            # Record metrics
+            metrics_service.record_latency(
+                metric_type=MetricType.OCR_ASYNC,
+                duration_seconds=processing_time,
+                success=True,
+                metadata={
+                    'engine': engine,
+                    'file_extension': file_extension,
+                    'pages': result.get('pages_processed', 0)
+                }
+            )
+            
             return {
                 **result,
                 'processing_time': processing_time,
@@ -126,6 +139,17 @@ class AsyncOCRService:
             }
             
         except Exception as e:
+            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            
+            # Record failure
+            metrics_service.record_latency(
+                metric_type=MetricType.OCR_ASYNC,
+                duration_seconds=processing_time,
+                success=False,
+                error_type=type(e).__name__,
+                metadata={'file_path': file_path}
+            )
+            
             logger.error(f"Async OCR processing failed: {e}")
             raise
     

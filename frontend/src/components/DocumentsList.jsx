@@ -26,10 +26,12 @@ import {
   Download as DownloadIcon,
   Delete as DeleteIcon,
   CloudUpload as UploadIcon,
+  AutoAwesome as ClassifyIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions';
 import api from '../services/api';
+import DocumentClassification from './DocumentClassification';
 
 const DocumentsList = () => {
   const { t } = useTranslation();
@@ -45,6 +47,9 @@ const DocumentsList = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedCaseId, setSelectedCaseId] = useState('');
+  
+  const [openClassificationDialog, setOpenClassificationDialog] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState(null);
 
   const fetchDocuments = React.useCallback(async () => {
     try {
@@ -200,7 +205,18 @@ const DocumentsList = () => {
                     <TableCell align="right">
                       <IconButton
                         size="small"
+                        onClick={() => {
+                          setSelectedDocumentId(doc.id);
+                          setOpenClassificationDialog(true);
+                        }}
+                        title={t('classification.title', 'Clasificación Automática')}
+                      >
+                        <ClassifyIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
                         onClick={() => handleDownload(doc.id, doc.filename)}
+                        title={t('documents.download', 'Descargar')}
                       >
                         <DownloadIcon />
                       </IconButton>
@@ -208,6 +224,7 @@ const DocumentsList = () => {
                         <IconButton
                           size="small"
                           onClick={() => handleDelete(doc.id)}
+                          title={t('common.delete', 'Eliminar')}
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -273,6 +290,26 @@ const DocumentsList = () => {
           <Button onClick={() => setOpenDialog(false)}>{t('common.cancel')}</Button>
           <Button onClick={handleUpload} variant="contained">
             {t('documents.upload', 'Subir')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Classification Dialog */}
+      <Dialog 
+        open={openClassificationDialog} 
+        onClose={() => setOpenClassificationDialog(false)} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>{t('classification.title', 'Clasificación Automática')}</DialogTitle>
+        <DialogContent>
+          {selectedDocumentId && (
+            <DocumentClassification documentId={selectedDocumentId} />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenClassificationDialog(false)}>
+            {t('common.close', 'Cerrar')}
           </Button>
         </DialogActions>
       </Dialog>

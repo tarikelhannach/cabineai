@@ -257,3 +257,32 @@ class AuditLog(Base):
     
     def __repr__(self):
         return f"<AuditLog(id={self.id}, action='{self.action}', user_id={self.user_id}, firm_id={self.firm_id})>"
+
+class DocumentClassification(Base):
+    __tablename__ = "document_classifications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False, index=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False, index=True)
+    
+    # Classification results from GPT-4o
+    document_type = Column(String(100))
+    legal_area = Column(String(200))
+    parties_involved = Column(Text)
+    important_dates = Column(Text)
+    urgency_level = Column(String(50))
+    summary = Column(Text)
+    keywords = Column(Text)
+    
+    # AI metadata
+    model_used = Column(String(50), default="gpt-4o")
+    confidence_score = Column(Float)
+    processing_time_seconds = Column(Float)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    classified_by = Column(Integer, ForeignKey("users.id"))
+    
+    def __repr__(self):
+        return f"<DocumentClassification(id={self.id}, document_id={self.document_id}, document_type='{self.document_type}')>"

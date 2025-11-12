@@ -99,5 +99,22 @@
     "loading": "Loading...",
     "error": "Error",
     "success": "Success"
+  },
+  "classification": {
+    "title": "Automatic Classification",
+    "classify": "Classify Document",
+    "reclassify": "Reclassify",
+    "no_classification": "This document hasn't been classified yet. Click 'Classify Document' to automatically analyze its content with AI.",
+    "error": "Classification error. Check that the OpenAI API key is configured.",
+    "document_type": "Document Type",
+    "legal_area": "Legal Area",
+    "parties": "Parties Involved",
+    "dates": "Important Dates",
+    "urgency": "Urgency Level",
+    "summary": "Summary",
+    "keywords": "Keywords",
+    "processing_time": "Processing Time",
+    "model": "Classified with",
+    "confidence": "confidence"
   }
 }

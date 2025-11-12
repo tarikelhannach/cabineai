@@ -308,5 +308,22 @@
     "mainNavigation": "Navigation principale",
     "notifications": "Notifications",
     "settings": "Paramètres"
+  },
+  "classification": {
+    "title": "Classification Automatique",
+    "classify": "Classifier le Document",
+    "reclassify": "Reclassifier",
+    "no_classification": "Ce document n'a pas encore été classifié. Cliquez sur 'Classifier le Document' pour analyser automatiquement son contenu avec l'IA.",
+    "error": "Erreur lors de la classification. Vérifiez que la clé API OpenAI est configurée.",
+    "document_type": "Type de Document",
+    "legal_area": "Domaine Juridique",
+    "parties": "Parties Impliquées",
+    "dates": "Dates Importantes",
+    "urgency": "Niveau d'Urgence",
+    "summary": "Résumé",
+    "keywords": "Mots-Clés",
+    "processing_time": "Temps de Traitement",
+    "model": "Classifié avec",
+    "confidence": "confiance"
   }
 }

@@ -49,6 +49,9 @@ replit-object-storage==1.0.2
 # transformers==4.35.0
 langdetect==1.0.9
 
+# OpenAI SDK for AI features (Classification, RAG Chat, Document Drafting)
+openai==1.54.0
+
 # HSM Integration
 PyKCS11==1.5.12
 asn1crypto==1.5.1

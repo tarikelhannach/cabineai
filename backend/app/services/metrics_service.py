@@ -19,6 +19,7 @@ Features:
 import time
 import logging
 import math
+import random
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -189,7 +190,6 @@ class MetricsService:
                 else:
                     # Reservoir full - use reservoir sampling (random replacement)
                     # This maintains statistical representativeness
-                    import random
                     replace_idx = random.randint(0, agg.reservoir_size - 1)
                     agg.latency_reservoir[replace_idx] = duration_seconds
                 
@@ -297,28 +297,41 @@ class MetricsService:
         Returns:
             Dict with comparative metrics
         """
-        with self._lock:
-            return {
-                "ocr": {
-                    "async": self._serialize_metric(MetricType.OCR_ASYNC),
-                    "sync": self._serialize_metric(MetricType.OCR_SYNC),
-                    "speedup": self._calculate_speedup(
-                        MetricType.OCR_ASYNC, MetricType.OCR_SYNC
-                    )
-                },
-                "embeddings": {
-                    "async": self._serialize_metric(MetricType.EMBEDDING_ASYNC),
-                    "sync": self._serialize_metric(MetricType.EMBEDDING_SYNC),
-                    "speedup": self._calculate_speedup(
-                        MetricType.EMBEDDING_ASYNC, MetricType.EMBEDDING_SYNC
-                    )
-                },
-                "cache": {
-                    "hits": self._metrics[MetricType.CACHE_HIT].total_calls,
-                    "misses": self._metrics[MetricType.CACHE_MISS].total_calls,
-                    "hit_rate_percent": self._calculate_cache_hit_rate()
-                }
-            }
+        # Lock all metrics individually (read-only, minimal contention)
+        result = {}
+        
+        # OCR comparison
+        with self._locks[MetricType.OCR_ASYNC]:
+            ocr_async = self._serialize_metric(MetricType.OCR_ASYNC)
+        with self._locks[MetricType.OCR_SYNC]:
+            ocr_sync = self._serialize_metric(MetricType.OCR_SYNC)
+        
+        result["ocr"] = {
+            "async": ocr_async,
+            "sync": ocr_sync,
+            "speedup": self._calculate_speedup(MetricType.OCR_ASYNC, MetricType.OCR_SYNC)
+        }
+        
+        # Embeddings comparison
+        with self._locks[MetricType.EMBEDDING_ASYNC]:
+            emb_async = self._serialize_metric(MetricType.EMBEDDING_ASYNC)
+        with self._locks[MetricType.EMBEDDING_SYNC]:
+            emb_sync = self._serialize_metric(MetricType.EMBEDDING_SYNC)
+        
+        result["embeddings"] = {
+            "async": emb_async,
+            "sync": emb_sync,
+            "speedup": self._calculate_speedup(MetricType.EMBEDDING_ASYNC, MetricType.EMBEDDING_SYNC)
+        }
+        
+        # Cache stats
+        result["cache"] = {
+            "hits": self._metrics[MetricType.CACHE_HIT].total_calls,
+            "misses": self._metrics[MetricType.CACHE_MISS].total_calls,
+            "hit_rate_percent": self._calculate_cache_hit_rate()
+        }
+        
+        return result
     
     def _calculate_speedup(
         self,
@@ -356,7 +369,7 @@ class MetricsService:
         Returns:
             List of rate limit events
         """
-        with self._lock:
+        with self._rate_limit_lock:  # Use rate limit lock
             events = self._rate_limit_events
             
             if since:

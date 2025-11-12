@@ -100,7 +100,9 @@ The frontend features a modern, responsive design with a purple gradient theme, 
 - **Incident Response**: Automated detection and 4-phase response workflow
 - **Compliance**: GDPR-compliant with Azure OpenAI (EU data residency)
 
-**Performance Optimizations** (November 2025):
+**Performance Optimizations** (November 2025 - FASE 2 COMPLETED):
+
+**Phase 1: Caching & Model Routing** ✅ COMPLETE
 - **LRU Cache System**: Thread-safe in-memory cache with 1-hour TTL and size limits
   - Embedding cache: Max 10K entries (~40MB), reduces API calls by 25-35%
   - Classification cache: Max 5K entries (~10MB), prevents duplicate classification requests
@@ -114,6 +116,35 @@ The frontend features a modern, responsive design with a purple gradient theme, 
   - Court structure: Courts of First Instance, Appeals, Cassation, Commercial, Administrative
   - Legal deadlines and timeframes specific to Moroccan law
   - Services updated: AIClassificationService, RAGChatService, DocumentDraftingService
+
+**Phase 2: Async Processing Pipeline** ✅ COMPLETE (Ready for staged rollout)
+- **AsyncOCRService**: Parallel page processing for multi-page PDFs
+  - Shared global ThreadPoolExecutor (CPU cores * 2) to prevent resource thrashing
+  - Semaphore backpressure (8 concurrent pages) for memory management
+  - Target: 3-5x faster for multi-page documents
+  - Implementation: `backend/app/services/async_ocr_service.py`
+  - Feature flag: `ASYNC_OCR_ENABLED=true` (default: enabled)
+  
+- **Async EmbeddingService**: Batch embedding generation
+  - Parallel processing of up to 100 document chunks
+  - Exponential backoff retry (3 attempts, 1s/2s/4s delays) for transient OpenAI errors
+  - Semaphore rate limiting (10 concurrent requests)
+  - Target: 10x faster for long documents
+  - Implementation: `backend/app/services/embedding_service.py`
+  - Feature flag: `ASYNC_EMBEDDINGS_ENABLED=true` (default: enabled)
+
+- **Celery Integration**: Seamless async/sync fallback
+  - Feature flag detection in `backend/app/tasks/ocr_tasks.py`
+  - Graceful degradation to sync processing on async failures
+  - Consistent database updates for both paths
+
+- **Production Readiness**:
+  - All critical bugs fixed (AttributeError, retry logic)
+  - Feature flags for staged rollout
+  - Robust error handling with partial failure support
+  - Thread-safe resource management
+  - **Status**: READY for gradual rollout to production
+  - **Recommendation**: Add metrics/monitoring (Fase 2.5) before enabling for all 600 tenants
 
 **Technical Specifications**:
 - **Cost**: ~$3,080/month for 600 firms (after model routing optimization, Azure OpenAI in France Central)

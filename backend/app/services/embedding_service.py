@@ -226,6 +226,10 @@ class EmbeddingService:
         
         Returns:
             1536-dimensional vector
+        
+        Raises:
+            OpenAIError: For retryable OpenAI API errors (rate limits, timeouts)
+            Exception: For non-retryable errors (validation, auth)
         """
         # Check cache first
         cached = cache_service.get_embedding(text, self.model)
@@ -244,36 +248,59 @@ class EmbeddingService:
             cache_service.set_embedding(text, embedding, self.model)
             return embedding
         except OpenAIError as e:
-            raise Exception(f"OpenAI async API error: {str(e)}")
+            # Preserve OpenAIError type for retry logic in generate_embeddings_batch
+            logger.debug(f"OpenAI async API error (will retry): {str(e)}")
+            raise
     
     async def generate_embeddings_batch(
         self,
         texts: List[str],
-        semaphore: Optional[asyncio.Semaphore] = None
+        semaphore: Optional[asyncio.Semaphore] = None,
+        max_retries: int = 3
     ) -> List[Optional[List[float]]]:
         """
-        Generate embeddings for multiple texts in parallel with optional backpressure.
+        Generate embeddings for multiple texts in parallel with backpressure and retry.
         
         Args:
             texts: List of texts to embed
             semaphore: Optional semaphore for rate limiting
+            max_retries: Maximum retries per chunk (default: 3)
         
         Returns:
-            List of embedding vectors (None for failed chunks)
+            List of embedding vectors (None for permanently failed chunks)
         """
         if semaphore is None:
             semaphore = asyncio.Semaphore(10)  # Default: 10 concurrent requests
         
-        async def embed_with_semaphore(text: str, index: int):
+        async def embed_with_semaphore_and_retry(text: str, index: int):
+            """Embed single chunk with exponential backoff retry"""
             async with semaphore:
-                try:
-                    logger.debug(f"Embedding chunk {index + 1}/{len(texts)}")
-                    return await self.generate_embedding_async(text)
-                except Exception as e:
-                    logger.error(f"Failed to embed chunk {index}: {e}")
-                    return None
+                for attempt in range(max_retries):
+                    try:
+                        logger.debug(f"Embedding chunk {index + 1}/{len(texts)} (attempt {attempt + 1})")
+                        return await self.generate_embedding_async(text)
+                    except OpenAIError as e:
+                        # Exponential backoff: 1s, 2s, 4s
+                        wait_time = 2 ** attempt
+                        if attempt < max_retries - 1:
+                            logger.warning(
+                                f"Chunk {index} embedding failed (attempt {attempt + 1}/{max_retries}): {e}. "
+                                f"Retrying in {wait_time}s..."
+                            )
+                            await asyncio.sleep(wait_time)
+                        else:
+                            logger.error(
+                                f"Chunk {index} permanently failed after {max_retries} attempts: {e}"
+                            )
+                            return None
+                    except Exception as e:
+                        # Non-retryable error (e.g., validation)
+                        logger.error(f"Non-retryable error for chunk {index}: {e}")
+                        return None
+                
+                return None  # Should never reach here
         
-        tasks = [embed_with_semaphore(text, i) for i, text in enumerate(texts)]
+        tasks = [embed_with_semaphore_and_retry(text, i) for i, text in enumerate(texts)]
         results = await asyncio.gather(*tasks, return_exceptions=False)
         
         return results

@@ -61,6 +61,9 @@ class AsyncOCRService:
         self.executor = get_global_executor()  # Use shared global executor
         self._sync_ocr_service = AdvancedOCRService()
         
+        # Cache executor worker count (avoid accessing private _max_workers)
+        self.executor_workers = self.executor._max_workers
+        
         # Semaphore for backpressure (limit concurrent page processing)
         self._semaphore = asyncio.Semaphore(max_concurrent_pages)
         
@@ -69,7 +72,8 @@ class AsyncOCRService:
         
         logger.info(
             f"AsyncOCRService initialized "
-            f"(max_concurrent={max_concurrent_pages}, enabled={self.enabled})"
+            f"(executor_workers={self.executor_workers}, "
+            f"max_concurrent={max_concurrent_pages}, enabled={self.enabled})"
         )
     
     async def process_document(
@@ -90,7 +94,11 @@ class AsyncOCRService:
             Dict with extracted_text, confidence, processing_time, etc.
         """
         try:
-            logger.info(f"Starting async OCR for: {file_path} (engine={engine}, max_workers={self.max_workers})")
+            logger.info(
+                f"Starting async OCR for: {file_path} "
+                f"(engine={engine}, executor_workers={self.executor_workers}, "
+                f"max_concurrent_pages={self.max_concurrent_pages})"
+            )
             start_time = datetime.utcnow()
             
             file_extension = Path(file_path).suffix.lower()

@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences
+POST,/api/auth/login,HTTPError('422 Client Error: Unprocessable Entity for url: /api/auth/login'),275

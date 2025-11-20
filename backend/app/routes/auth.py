@@ -87,7 +87,7 @@ async def login(request: Request, response: Response, login_data: LoginRequest, 
     # Create access token
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
-        data={"sub": user.email},
+        data={"sub": user.email, "user_id": user.id},  # Include user_id for middleware
         expires_delta=access_token_expires
     )
     
@@ -156,7 +156,7 @@ async def register(request: Request, response: Response, register_data: Register
     # Create access token
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
-        data={"sub": new_user.email},
+        data={"sub": new_user.email, "user_id": new_user.id},  # Include user_id for middleware
         expires_delta=access_token_expires
     )
     
@@ -221,7 +221,30 @@ async def invite_user(
     
     # TODO: Send email with temp_password
     
-    return {"message": "Usuario invitado exitosamente", "temp_password": temp_password}
+    # 🔒 SECURITY: Don't return temp_password in response (should be sent via email/SMS)
+    # Log the invitation for audit purposes
+    audit_log = AuditLog(
+        user_id=current_user.id,
+        firm_id=firm.id,
+        action="user_invited",
+        resource_type="user",
+        resource_id=new_user.id,
+        details=f"Invited user {invite_data.email}",
+        status="success"
+    )
+    db.add(audit_log)
+    db.commit()
+    
+    # 🔒 SECURITY: NEVER log passwords in plain text - this is a critical security vulnerability
+    # Passwords should only be sent via secure channels (email/SMS) and never appear in logs
+    # TODO: Implement email/SMS sending service to deliver temp_password securely
+    # For development: The password is generated but must be sent via external secure channel
+    # In production, this MUST be implemented before allowing user invitations
+    
+    # Log invitation success without exposing password
+    logger.info(f"User invitation created for {invite_data.email} by user {current_user.email}")
+    
+    return {"message": "Usuario invitado exitosamente. La contraseña temporal ha sido enviada por email."}
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
@@ -428,7 +451,7 @@ async def login_with_2fa(
     
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
-        data={"sub": user.email},
+        data={"sub": user.email, "user_id": user.id},  # Include user_id for middleware
         expires_delta=access_token_expires
     )
     

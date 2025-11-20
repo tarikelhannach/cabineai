@@ -90,7 +90,7 @@ const Layout = ({ children, onToggleTheme, mode }) => {
 
   const breadcrumbs = useMemo(() => {
     const pathnames = location.pathname.split('/').filter((x) => x);
-    
+
     const routes = {
       '': { label: t('navigation.dashboard'), icon: <HomeIcon sx={{ fontSize: 20 }} /> },
       'facturation': { label: t('billing.title'), icon: <BillingIcon sx={{ fontSize: 20 }} /> },
@@ -102,11 +102,11 @@ const Layout = ({ children, onToggleTheme, mode }) => {
     };
 
     const items = [
-      { 
-        label: routes[''].label, 
-        icon: routes[''].icon, 
-        path: '/', 
-        isHome: true 
+      {
+        label: routes[''].label,
+        icon: routes[''].icon,
+        path: '/',
+        isHome: true
       }
     ];
 
@@ -133,20 +133,39 @@ const Layout = ({ children, onToggleTheme, mode }) => {
       <Box
         sx={{
           p: 3,
-          background: theme.palette.background.gradient,
-          color: 'white',
-          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          gap: 1
         }}
       >
-        <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-          🏛️ {t('branding.appName')}
-        </Typography>
-        <Typography variant="caption" sx={{ opacity: 0.9 }}>
-          {t('branding.country')}
-        </Typography>
+        <Box
+          sx={{
+            width: 48,
+            height: 48,
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #38bdf8 0%, #2563eb 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '24px',
+            boxShadow: '0 4px 12px rgba(56, 189, 248, 0.3)'
+          }}
+        >
+          ⚖️
+        </Box>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '-0.025em', color: '#fff' }}>
+            CabineAI
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#94a3b8', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            Legal Intelligence
+          </Typography>
+        </Box>
       </Box>
 
-      <Divider />
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
 
       {/* Perfil de Usuario */}
       <Box sx={{ p: 2 }}>
@@ -156,41 +175,43 @@ const Layout = ({ children, onToggleTheme, mode }) => {
             alignItems: 'center',
             p: 1.5,
             borderRadius: 2,
-            bgcolor: alpha(theme.palette.primary.main, 0.1),
-            transition: 'all 0.2s',
-            '&:hover': {
-              bgcolor: alpha(theme.palette.primary.main, 0.2),
-            },
+            bgcolor: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
           }}
         >
           <Avatar
             sx={{
-              bgcolor: theme.palette.primary.main,
+              bgcolor: 'primary.main',
               width: 40,
               height: 40,
               ...(theme.direction === 'rtl' ? { ml: 1.5 } : { mr: 1.5 }),
+              fontWeight: 700
             }}
           >
             {user?.name?.charAt(0).toUpperCase() || 'U'}
           </Avatar>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          <Box sx={{ flex: 1, overflow: 'hidden' }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
               {user?.name || t('common.user')}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-              {user?.email || ''}
-            </Typography>
-            <Chip 
+            <Chip
               label={getRoleLabel(user?.role, t)}
               size="small"
-              color={getRoleColor(user?.role)}
-              sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
+              sx={{
+                mt: 0.5,
+                height: 20,
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                bgcolor: 'rgba(56, 189, 248, 0.2)',
+                color: '#38bdf8',
+                border: '1px solid rgba(56, 189, 248, 0.3)'
+              }}
             />
           </Box>
         </Box>
       </Box>
 
-      <Divider />
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
 
       {/* Menú de Navegación */}
       <List sx={{ flex: 1, px: 2, py: 1 }}>
@@ -212,7 +233,7 @@ const Layout = ({ children, onToggleTheme, mode }) => {
               }}
               selected={location.pathname === item.path}
             >
-              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
+              <ListItemIcon>
                 {item.icon}
               </ListItemIcon>
               <ListItemText
@@ -261,13 +282,13 @@ const Layout = ({ children, onToggleTheme, mode }) => {
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       {/* Skip Navigation for Accessibility */}
       <SkipNavigation />
-      
+
       {/* AppBar */}
       <AppBar
         position="fixed"
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ...(isRtl 
+          ...(isRtl
             ? { mr: { sm: `${drawerWidth}px` } }
             : { ml: { sm: `${drawerWidth}px` } }
           ),
@@ -282,9 +303,9 @@ const Layout = ({ children, onToggleTheme, mode }) => {
             aria-label={mobileOpen ? t('a11y.closeMenu') : t('a11y.openMenu')}
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ 
-              ...(isRtl ? { ml: 2 } : { mr: 2 }), 
-              display: { sm: 'none' } 
+            sx={{
+              ...(isRtl ? { ml: 2 } : { mr: 2 }),
+              display: { sm: 'none' }
             }}
           >
             <MenuIcon />
@@ -293,11 +314,11 @@ const Layout = ({ children, onToggleTheme, mode }) => {
             {t('branding.appName')}
           </Typography>
           <LanguageSelector />
-          <IconButton 
-            onClick={onToggleTheme} 
-            color="inherit" 
+          <IconButton
+            onClick={onToggleTheme}
+            color="inherit"
             aria-label={t('a11y.toggleTheme')}
-            sx={{ 
+            sx={{
               ...(isRtl ? { mr: 1 } : { ml: 1 })
             }}
           >
@@ -337,7 +358,7 @@ const Layout = ({ children, onToggleTheme, mode }) => {
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: drawerWidth,
-              ...(isRtl 
+              ...(isRtl
                 ? { borderLeft: `1px solid ${alpha(theme.palette.divider, 0.1)}` }
                 : { borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}` }
               ),
@@ -366,7 +387,7 @@ const Layout = ({ children, onToggleTheme, mode }) => {
         }}
       >
         <Toolbar />
-        
+
         {/* Breadcrumb Navigation */}
         {breadcrumbs.length > 1 && (
           <Box sx={{ mb: 3, mt: 1 }}>
@@ -381,7 +402,7 @@ const Layout = ({ children, onToggleTheme, mode }) => {
             >
               {breadcrumbs.map((item, index) => {
                 const isLast = index === breadcrumbs.length - 1;
-                
+
                 return isLast ? (
                   <Box
                     key={item.path}
@@ -425,7 +446,7 @@ const Layout = ({ children, onToggleTheme, mode }) => {
             </Breadcrumbs>
           </Box>
         )}
-        
+
         {children}
       </Box>
     </Box>

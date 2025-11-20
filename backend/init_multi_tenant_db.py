@@ -15,7 +15,7 @@ from app.models import (
     Base, Firm, User, Expediente, Document, AuditLog,
     Subscription, Invoice,
     SubscriptionTier, SubscriptionStatus, UserRole,
-    LanguagePreference, CaseStatus, InvoiceStatus
+    LanguagePreference, CaseStatus, CaseType, Priority, InvoiceStatus
 )
 from passlib.context import CryptContext
 
@@ -187,10 +187,10 @@ def create_example_firm():
             firm_id=firm.id,
             expediente_number="EXP-2025-001",
             client_name="Société ABC SARL",
-            matter_type="commercial",
+            matter_type=CaseType.COMMERCIAL,
             description="Litige commercial concernant un contrat de distribution",
             status=CaseStatus.IN_PROGRESS,
-            priority="high",
+            priority=Priority.HIGH,
             owner_id=admin_user.id,
             assigned_lawyer_id=lawyer_user.id
         )

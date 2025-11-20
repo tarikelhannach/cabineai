@@ -9,7 +9,7 @@ from pathlib import Path
 import uuid
 
 from ..database import get_db
-from ..models import Document as DocumentModel, User, Expediente, Firm
+from app.models import Document as DocumentModel, User, Expediente, Firm, SubscriptionStatus
 from ..auth.jwt import get_current_user
 from pydantic import BaseModel
 from datetime import datetime
@@ -34,7 +34,7 @@ class DocumentResponse(BaseModel):
 class DocumentUploadResponse(BaseModel):
     id: int
     filename: str
-    file_path: str
+    # file_path removed for security - use /api/documents/{id}/download instead
     message: str
 
 class UpdateOCRRequest(BaseModel):
@@ -78,7 +78,8 @@ async def upload_document(
             detail="Firm not found"
         )
     
-    if firm.subscription_status != "active":
+    # Check if subscription is active or trial
+    if firm.subscription_status not in [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL]:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail="Subscription expired. Please renew to upload documents."
@@ -97,7 +98,8 @@ async def upload_document(
             )
         
         # RBAC: Check permissions
-        if current_user.role.value not in ["admin", "lawyer"]:
+        # Admin and clerk can upload documents to any case in their firm (consistent with cases.py)
+        if current_user.role.value not in ["admin", "clerk", "lawyer"]:
             if case.owner_id != current_user.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -136,7 +138,7 @@ async def upload_document(
             file_path=str(file_path),
             file_size=file_size,
             mime_type=file.content_type,
-            case_id=case_id,
+            expediente_id=case_id,  # Map case_id to expediente_id
             uploaded_by=current_user.id
         )
         
@@ -159,7 +161,6 @@ async def upload_document(
         return DocumentUploadResponse(
             id=new_document.id,
             filename=new_document.filename,
-            file_path=new_document.file_path,
             message=message
         )
     
@@ -191,7 +192,8 @@ async def download_document(
         )
     
     # RBAC: Check permissions
-    if current_user.role.value not in ["admin", "lawyer"]:
+    # Admin and clerk can download all documents in their firm (consistent with cases.py)
+    if current_user.role.value not in ["admin", "clerk", "lawyer"]:
         if document.uploaded_by != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -260,22 +262,32 @@ async def get_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    document = db.query(DocumentModel).filter(DocumentModel.id == document_id).first()
+    # 🔒 TENANT ISOLATION: Filter by firm_id FIRST
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+    
+    document = db.query(DocumentModel).filter(
+        DocumentModel.id == document_id,
+        DocumentModel.firm_id == current_user.firm_id  # ← CRITICAL: Prevent cross-tenant access
+    ).first()
     
     if not document:
-        raise HTTPException(status_code=404, detail="Documento no encontrado")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Documento no encontrado"
+        )
     
-    if document.case_id:
-        case = db.query(Case).filter(Case.id == document.case_id).first()
-        if current_user.role.value not in ["admin", "clerk"]:
-            if current_user.role.value == "judge":
-                if case.assigned_judge_id != current_user.id:
-                    raise HTTPException(status_code=403, detail="No autorizado")
-            elif case.owner_id != current_user.id:
-                raise HTTPException(status_code=403, detail="No autorizado")
-    
-    elif document.uploaded_by != current_user.id and current_user.role.value not in ["admin", "clerk"]:
-        raise HTTPException(status_code=403, detail="No autorizado")
+    # RBAC: Check permissions
+    # Admin and clerk can access all documents in their firm (consistent with cases.py)
+    if current_user.role.value not in ["admin", "clerk", "lawyer", "assistant"]:
+        if document.uploaded_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No autorizado"
+            )
     
     return document
 
@@ -288,24 +300,32 @@ async def delete_document(
     from app.core.cache import get_cache_manager
     cache = get_cache_manager()
     
-    document = db.query(DocumentModel).filter(DocumentModel.id == document_id).first()
+    # 🔒 TENANT ISOLATION: Filter by firm_id FIRST
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+    
+    document = db.query(DocumentModel).filter(
+        DocumentModel.id == document_id,
+        DocumentModel.firm_id == current_user.firm_id  # ← CRITICAL: Prevent cross-tenant access
+    ).first()
     
     if not document:
-        raise HTTPException(status_code=404, detail="Documento no encontrado")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Documento no encontrado"
+        )
     
-    if current_user.role.value not in ["admin", "clerk"]:
-        if document.case_id:
-            case = db.query(Case).filter(Case.id == document.case_id).first()
-            if not case:
-                raise HTTPException(status_code=404, detail="Caso asociado no encontrado")
-            
-            if current_user.role.value == "judge":
-                if case.assigned_judge_id != current_user.id:
-                    raise HTTPException(status_code=403, detail="No autorizado para eliminar este documento")
-            elif case.owner_id != current_user.id:
-                raise HTTPException(status_code=403, detail="No autorizado para eliminar este documento")
-        elif document.uploaded_by != current_user.id:
-            raise HTTPException(status_code=403, detail="No autorizado para eliminar este documento")
+    # RBAC: Check permissions
+    # Admin and clerk can delete all documents in their firm (consistent with cases.py)
+    if current_user.role.value not in ["admin", "clerk", "lawyer"]:
+        if document.uploaded_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No autorizado para eliminar este documento"
+            )
     
     try:
         case_id = document.case_id
@@ -324,7 +344,7 @@ async def delete_document(
     except Exception as e:
         db.rollback()
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al eliminar documento: {str(e)}"
         )
 
@@ -340,21 +360,32 @@ async def process_document_ocr_sync(
     """
     from app.services.ocr_service import SyncOCRService
     
-    document = db.query(DocumentModel).filter(DocumentModel.id == document_id).first()
+    # 🔒 TENANT ISOLATION: Filter by firm_id FIRST
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+    
+    document = db.query(DocumentModel).filter(
+        DocumentModel.id == document_id,
+        DocumentModel.firm_id == current_user.firm_id  # ← CRITICAL: Prevent cross-tenant access
+    ).first()
     
     if not document:
-        raise HTTPException(status_code=404, detail="Documento no encontrado")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Documento no encontrado"
+        )
     
-    if document.case_id:
-        case = db.query(Case).filter(Case.id == document.case_id).first()
-        if current_user.role.value not in ["admin", "clerk"]:
-            if current_user.role.value == "judge":
-                if case.assigned_judge_id != current_user.id:
-                    raise HTTPException(status_code=403, detail="No autorizado")
-            elif case.owner_id != current_user.id:
-                raise HTTPException(status_code=403, detail="No autorizado")
-    elif document.uploaded_by != current_user.id and current_user.role.value not in ["admin", "clerk"]:
-        raise HTTPException(status_code=403, detail="No autorizado")
+    # RBAC: Check permissions
+    # Admin and clerk can process OCR for all documents in their firm (consistent with cases.py)
+    if current_user.role.value not in ["admin", "clerk", "lawyer", "assistant"]:
+        if document.uploaded_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No autorizado"
+            )
     
     if document.ocr_processed:
         return {
@@ -406,6 +437,8 @@ async def process_document_ocr_sync(
         }
     
     except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al procesar OCR: {str(e)}"
         )
 

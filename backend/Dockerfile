@@ -57,8 +57,10 @@ RUN apt-get update && apt-get install -y \
 # Configurar Tesseract para idiomas de Marruecos
 RUN echo 'ara+fra+spa' > /etc/tesseract-ocr-config.txt
 
-# Configurar ImageMagick policy para PDFs
-RUN sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml
+# Configurar ImageMagick policy para PDFs (si existe el archivo)
+RUN if [ -f /etc/ImageMagick-6/policy.xml ]; then \
+        sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml; \
+    fi
 
 # Crear directorios de la aplicación
 RUN mkdir -p /app/uploads /app/logs /app/temp /app/hsm && \

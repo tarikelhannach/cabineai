@@ -79,34 +79,52 @@ const Pricing = () => {
                         <Card sx={{
                             display: 'flex',
                             flexDirection: 'column',
-                            border: plan.id === 'pro' ? '2px solid #1976d2' : '1px solid #e0e0e0',
-                            position: 'relative'
+                            border: plan.id === 'pro' ? '2px solid #38bdf8' : undefined,
+                            position: 'relative',
+                            height: '100%',
+                            transition: 'transform 0.3s ease',
+                            '&:hover': {
+                                transform: 'translateY(-8px)',
+                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                            }
                         }}>
                             {plan.id === 'pro' && (
                                 <Box sx={{
                                     position: 'absolute',
-                                    top: 10,
-                                    right: 10,
+                                    top: 12,
+                                    right: 12,
                                     display: 'flex',
                                     alignItems: 'center',
-                                    color: 'primary.main'
+                                    gap: 0.5,
+                                    color: '#0f172a',
+                                    bgcolor: '#38bdf8',
+                                    px: 1.5,
+                                    py: 0.5,
+                                    borderRadius: '20px',
+                                    boxShadow: '0 4px 6px -1px rgba(56, 189, 248, 0.4)'
                                 }}>
-                                    <StarIcon /> <Typography variant="caption" fontWeight="bold">POPULAR</Typography>
+                                    <StarIcon fontSize="small" />
+                                    <Typography variant="caption" fontWeight="800" letterSpacing="0.05em">
+                                        POPULAR
+                                    </Typography>
                                 </Box>
                             )}
                             <CardHeader
                                 title={plan.title}
                                 subheader={plan.subheader}
-                                titleTypographyProps={{ align: 'center' }}
+                                titleTypographyProps={{ align: 'center', variant: 'h4', fontWeight: 800 }}
                                 subheaderTypographyProps={{ align: 'center' }}
-                                sx={{ backgroundColor: (theme) => theme.palette.grey[200] }}
+                                sx={{
+                                    backgroundColor: (theme) => theme.palette.mode === 'light' ? 'rgba(241, 245, 249, 0.5)' : 'rgba(30, 41, 59, 0.5)',
+                                    pb: 0
+                                }}
                             />
-                            <CardContent sx={{ flexGrow: 1 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', mb: 2 }}>
-                                    <Typography component="h2" variant="h3" color="text.primary">
+                            <CardContent sx={{ flexGrow: 1, pt: 4 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', mb: 4 }}>
+                                    <Typography component="h2" variant="h3" color="text.primary" fontWeight="800">
                                         {plan.price}
                                     </Typography>
-                                    <Typography variant="h6" color="text.secondary">
+                                    <Typography variant="h6" color="text.secondary" sx={{ ml: 1 }}>
                                         {plan.period}
                                     </Typography>
                                 </Box>

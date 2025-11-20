@@ -84,7 +84,17 @@ async def get_judges(
     db: Session = Depends(get_db)
 ):
     """Obtener lista de jueces para asignación de casos"""
-    judges = db.query(User).filter(User.role == UserRole.JUDGE).all()
+    # 🔒 TENANT ISOLATION: Filter by firm_id
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+        
+    judges = db.query(User).filter(
+        User.role == UserRole.JUDGE,
+        User.firm_id == current_user.firm_id  # ← CRITICAL: Only show judges in same firm
+    ).all()
     return [
         {
             "id": judge.id,
@@ -101,7 +111,14 @@ async def get_users(
     db: Session = Depends(get_db)
 ):
     """Obtener lista de todos los usuarios (solo admin/clerk)"""
-    users = db.query(User).all()
+    # 🔒 TENANT ISOLATION: Filter by firm_id
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+
+    users = db.query(User).filter(User.firm_id == current_user.firm_id).all()  # ← CRITICAL
     return [
         {
             "id": user.id,
@@ -133,7 +150,8 @@ async def create_user(
         name=user_data.name,
         email=user_data.email,
         hashed_password=hashed_password,
-        role=user_data.role
+        role=user_data.role,
+        firm_id=current_user.firm_id  # ← CRITICAL: Assign to same firm
     )
     
     db.add(new_user)
@@ -155,7 +173,17 @@ async def update_user(
     db: Session = Depends(get_db)
 ):
     """Actualizar usuario (solo admin/clerk)"""
-    user = db.query(User).filter(User.id == user_id).first()
+    # 🔒 TENANT ISOLATION: Filter by firm_id
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.firm_id == current_user.firm_id  # ← CRITICAL: Prevent cross-tenant update
+    ).first()
     
     if not user:
         raise HTTPException(
@@ -198,7 +226,17 @@ async def delete_user(
     db: Session = Depends(get_db)
 ):
     """Eliminar usuario (solo admin)"""
-    user = db.query(User).filter(User.id == user_id).first()
+    # 🔒 TENANT ISOLATION: Filter by firm_id
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.firm_id == current_user.firm_id  # ← CRITICAL: Prevent cross-tenant deletion
+    ).first()
     
     if not user:
         raise HTTPException(

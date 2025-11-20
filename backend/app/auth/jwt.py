@@ -74,7 +74,10 @@ async def get_current_user(
 def require_role(allowed_roles: list):
     """Decorador para requerir roles específicos"""
     async def role_checker(current_user: User = Depends(get_current_user)):
-        if current_user.role.value not in allowed_roles:
+        # Handle both Enum objects and string values in allowed_roles
+        allowed_values = [r.value if hasattr(r, 'value') else r for r in allowed_roles]
+        
+        if current_user.role.value not in allowed_values:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permisos para realizar esta acción"

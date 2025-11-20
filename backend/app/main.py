@@ -93,10 +93,11 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Add SlowAPI middleware for automatic rate limit headers
 app.add_middleware(SlowAPIMiddleware)
 
-# CORS configurado para Marruecos - Allow all origins in development
+# CORS configurado para Marruecos - Strict in production
+cors_origins = settings.allowed_origins.split(",") if settings.allowed_origins else []
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.debug else settings.allowed_origins.split(","),
+    allow_origins=cors_origins if not settings.debug else ["*"],  # Only allow all in debug mode
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -156,12 +157,21 @@ async def get_metrics():
         }
     }
 
-# Add tenant and language middleware
+# Add authentication middleware FIRST (sets request.state.user)
+from .middleware.auth_middleware import AuthMiddleware
 from .middleware.tenant import TenantMiddleware
 from .middleware.language import LanguageMiddleware
 
-app.add_middleware(TenantMiddleware)
-app.add_middleware(LanguageMiddleware)
+# ⚠️ CRITICAL: FastAPI/Starlette executes middlewares in REVERSE order (LIFO)
+# To achieve execution order: AuthMiddleware -> TenantMiddleware -> LanguageMiddleware
+# We must add them in reverse: LanguageMiddleware -> TenantMiddleware -> AuthMiddleware
+# This ensures:
+# 1. AuthMiddleware runs FIRST and sets request.state.user
+# 2. TenantMiddleware runs SECOND and can use request.state.user
+# 3. LanguageMiddleware runs LAST and can use request.state.user
+app.add_middleware(LanguageMiddleware)  # Added first, executes LAST
+app.add_middleware(TenantMiddleware)   # Added second, executes SECOND
+app.add_middleware(AuthMiddleware)     # Added last, executes FIRST
 
 # Include routers
 from .routes import auth, cases, documents, users, audit, search, signatures, billing, ai_classification, chat, drafting, metrics

@@ -83,26 +83,45 @@ const DocumentsList = () => {
   }, [fetchDocuments, fetchCases]);
 
   const handleUpload = async () => {
-    if (!selectedFile || !selectedCaseId) {
-      setError(t('documents.selectFileAndCase', 'Selecciona un archivo y un caso'));
+    if (!selectedFile) {
+      setError(t('documents.selectFile', 'Por favor selecciona un archivo'));
       return;
     }
 
     const formData = new FormData();
     formData.append('file', selectedFile);
 
+    // Case ID is optional - only add if a case is selected
+    if (selectedCaseId) {
+      formData.append('case_id', selectedCaseId);
+    }
+
     try {
-      await api.post(`/documents/${selectedCaseId}/upload`, formData, {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.post(`/documents/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
+
       setOpenDialog(false);
       setSelectedFile(null);
       setSelectedCaseId('');
+
+      // Show success message
+      alert(response.data.message || 'Documento subido exitosamente');
+
+      // Refresh documents list
       fetchDocuments();
     } catch (err) {
-      setError(err.response?.data?.detail || t('common.error'));
+      console.error('Upload error:', err);
+      const errorMsg = err.response?.data?.detail || 'Error al subir el documento';
+      setError(errorMsg);
+      alert(errorMsg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -275,16 +294,15 @@ const DocumentsList = () => {
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               select
-              label={t('documents.selectCase', 'Seleccionar Caso')}
+              label={t('documents.selectCase', 'Seleccionar Caso (Opcional)')}
               value={selectedCaseId}
               onChange={(e) => setSelectedCaseId(e.target.value)}
               fullWidth
-              required
             >
-              <MenuItem value="">{t('documents.selectCase', 'Seleccionar Caso')}</MenuItem>
+              <MenuItem value="">{t('documents.noCase', 'Sin asociar a un caso')}</MenuItem>
               {cases.map((caseItem) => (
                 <MenuItem key={caseItem.id} value={caseItem.id}>
-                  {caseItem.case_number} - {caseItem.title}
+                  {caseItem.expediente_number} - {caseItem.client_name}
                 </MenuItem>
               ))}
             </TextField>

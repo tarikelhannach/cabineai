@@ -1,0 +1,344 @@
+{
+  "tech_stack": [
+    "Python 3.11",
+    "FastAPI",
+    "PostgreSQL 15",
+    "Redis",
+    "Elasticsearch 8.11",
+    "Celery",
+    "React 18",
+    "Vite",
+    "Material-UI",
+    "Docker",
+    "Nginx"
+  ],
+  "features": [
+    {
+      "name": "Authentication API",
+      "description": "User authentication with JWT tokens, 2FA support, password reset, and user management",
+      "files": ["backend/app/routes/auth.py", "backend/app/auth/auth.py", "backend/app/auth/jwt.py", "backend/app/auth/two_factor.py"],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "paths": {
+          "/api/auth/login": {
+            "post": {
+              "summary": "User login",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "email": {"type": "string"},
+                        "password": {"type": "string"}
+                      }
+                    }
+                  }
+                }
+              },
+              "responses": {
+                "200": {
+                  "description": "Login successful",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "access_token": {"type": "string"},
+                          "token_type": {"type": "string"},
+                          "user": {"type": "object"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/api/auth/register": {
+            "post": {
+              "summary": "Register new firm and admin user"
+            }
+          },
+          "/api/auth/login-2fa": {
+            "post": {
+              "summary": "Login with 2FA support"
+            }
+          },
+          "/api/auth/2fa/enable": {
+            "post": {
+              "summary": "Enable 2FA for user"
+            }
+          },
+          "/api/auth/2fa/verify": {
+            "post": {
+              "summary": "Verify 2FA code"
+            }
+          },
+          "/api/auth/password/reset-request": {
+            "post": {
+              "summary": "Request password reset"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Documents API",
+      "description": "Document upload, download, OCR processing, and management with multi-tenant isolation",
+      "files": ["backend/app/routes/documents.py", "backend/app/services/ocr_service.py"],
+      "api_doc": {
+        "paths": {
+          "/api/documents/upload": {
+            "post": {
+              "summary": "Upload document",
+              "requestBody": {
+                "content": {
+                  "multipart/form-data": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "file": {"type": "string", "format": "binary"},
+                        "case_id": {"type": "integer"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/api/documents/{document_id}/download": {
+            "get": {
+              "summary": "Download document"
+            }
+          },
+          "/api/documents/{document_id}": {
+            "get": {
+              "summary": "Get document details"
+            },
+            "delete": {
+              "summary": "Delete document"
+            }
+          },
+          "/api/documents/{document_id}/process-ocr": {
+            "post": {
+              "summary": "Process OCR for document"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Cases API",
+      "description": "Case/Expediente management with multi-tenant isolation and RBAC",
+      "files": ["backend/app/routes/cases.py"],
+      "api_doc": {
+        "paths": {
+          "/api/cases/": {
+            "get": {
+              "summary": "List cases"
+            },
+            "post": {
+              "summary": "Create new case"
+            }
+          },
+          "/api/cases/{case_id}": {
+            "get": {
+              "summary": "Get case details"
+            },
+            "put": {
+              "summary": "Update case"
+            },
+            "delete": {
+              "summary": "Delete case"
+            }
+          },
+          "/api/cases/search/": {
+            "get": {
+              "summary": "Search cases with filters"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Chat RAG API",
+      "description": "Intelligent chat with RAG (Retrieval-Augmented Generation) using GPT-4o and semantic search",
+      "files": ["backend/app/routes/chat.py", "backend/app/services/rag_chat_service.py", "backend/app/services/embedding_service.py"],
+      "api_doc": {
+        "paths": {
+          "/api/chat/conversations": {
+            "post": {
+              "summary": "Create conversation"
+            },
+            "get": {
+              "summary": "List conversations"
+            }
+          },
+          "/api/chat/messages": {
+            "post": {
+              "summary": "Send message and get AI response"
+            }
+          },
+          "/api/chat/documents/{document_id}/embed": {
+            "post": {
+              "summary": "Generate embeddings for document"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "AI Classification API",
+      "description": "Automatic document classification using GPT-4o",
+      "files": ["backend/app/routes/ai_classification.py", "backend/app/services/ai_classification_service.py"],
+      "api_doc": {
+        "paths": {
+          "/api/documents/{document_id}/classify": {
+            "post": {
+              "summary": "Classify document with AI"
+            }
+          },
+          "/api/documents/{document_id}/classification": {
+            "get": {
+              "summary": "Get document classification"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Document Drafting API",
+      "description": "AI-powered legal document generation using GPT-4o with templates",
+      "files": ["backend/app/routes/drafting.py", "backend/app/services/document_drafting_service.py"],
+      "api_doc": {
+        "paths": {
+          "/api/drafting/generate/template": {
+            "post": {
+              "summary": "Generate document from template"
+            }
+          },
+          "/api/drafting/templates": {
+            "post": {
+              "summary": "Create template"
+            },
+            "get": {
+              "summary": "List templates"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Search API",
+      "description": "Full-text search across documents and cases using Elasticsearch",
+      "files": ["backend/app/routes/search.py", "backend/app/services/elasticsearch_service.py"],
+      "api_doc": {
+        "paths": {
+          "/api/search/documents": {
+            "get": {
+              "summary": "Search documents"
+            }
+          },
+          "/api/search/cases": {
+            "get": {
+              "summary": "Search cases"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Users API",
+      "description": "User management with RBAC and multi-tenant support",
+      "files": ["backend/app/routes/users.py"],
+      "api_doc": {
+        "paths": {
+          "/api/users/": {
+            "get": {
+              "summary": "List users"
+            },
+            "post": {
+              "summary": "Create user"
+            }
+          },
+          "/api/users/{user_id}": {
+            "put": {
+              "summary": "Update user"
+            },
+            "delete": {
+              "summary": "Delete user"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Billing API",
+      "description": "Stripe integration for subscription management",
+      "files": ["backend/app/routes/billing.py", "backend/app/services/stripe_service.py"],
+      "api_doc": {
+        "paths": {
+          "/api/billing/create-checkout-session": {
+            "post": {
+              "summary": "Create Stripe checkout session"
+            }
+          },
+          "/api/billing/webhook": {
+            "post": {
+              "summary": "Stripe webhook handler"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Audit API",
+      "description": "Audit logging and compliance tracking",
+      "files": ["backend/app/routes/audit.py"],
+      "api_doc": {
+        "paths": {
+          "/api/audit/logs": {
+            "get": {
+              "summary": "Get audit logs"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Signatures API",
+      "description": "Digital signature management with HSM support",
+      "files": ["backend/app/routes/signatures.py"],
+      "api_doc": {
+        "paths": {
+          "/api/signatures/sign": {
+            "post": {
+              "summary": "Sign document"
+            }
+          },
+          "/api/signatures/verify": {
+            "post": {
+              "summary": "Verify signature"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Metrics API",
+      "description": "Performance metrics and monitoring",
+      "files": ["backend/app/routes/metrics.py", "backend/app/services/metrics_service.py"],
+      "api_doc": {
+        "paths": {
+          "/api/metrics/summary": {
+            "get": {
+              "summary": "Get metrics summary"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
+

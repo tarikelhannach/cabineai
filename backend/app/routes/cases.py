@@ -11,30 +11,30 @@ from ..auth.jwt import get_current_user, require_role
 router = APIRouter(prefix="/cases", tags=["cases"])
 
 class CaseCreate(BaseModel):
-    case_number: str
-    title: str
+    expediente_number: str
+    client_name: str
     description: Optional[str] = None
     status: CaseStatus = CaseStatus.PENDING
-    assigned_judge_id: Optional[int] = None
+    assigned_lawyer_id: Optional[int] = None
 
 class CaseUpdate(BaseModel):
-    title: Optional[str] = None
+    client_name: Optional[str] = None
     description: Optional[str] = None
     status: Optional[CaseStatus] = None
-    assigned_judge_id: Optional[int] = None
+    assigned_lawyer_id: Optional[int] = None
 
 class CaseResponse(BaseModel):
     id: int
-    case_number: str
-    title: str
+    expediente_number: str
+    client_name: str
     description: Optional[str]
     status: str
     owner_id: int
-    assigned_judge_id: Optional[int]
+    assigned_lawyer_id: Optional[int]
     created_at: datetime
     updated_at: datetime
     owner: dict
-    assigned_judge: Optional[dict] = None
+    assigned_lawyer: Optional[dict] = None
     
     class Config:
         from_attributes = True
@@ -48,17 +48,24 @@ async def get_cases(
     db: Session = Depends(get_db)
 ):
     """Obtener lista de casos"""
-    query = db.query(Case)
+    # 🔒 TENANT ISOLATION: Always filter by firm_id FIRST
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
     
-    # Filter based on user role
+    query = db.query(Case).filter(Case.firm_id == current_user.firm_id)  # ← CRITICAL
+    
+    # Filter based on user role (within same firm)
     if current_user.role == UserRole.LAWYER:
         query = query.filter(Case.owner_id == current_user.id)
     elif current_user.role == UserRole.JUDGE:
-        query = query.filter(Case.assigned_judge_id == current_user.id)
+        query = query.filter(Case.assigned_lawyer_id == current_user.id)
     elif current_user.role == UserRole.CLERK:
-        pass
+        pass  # Clerk can see all cases in their firm
     elif current_user.role == UserRole.ADMIN:
-        pass
+        pass  # Admin can see all cases in their firm
     else:
         query = query.filter(Case.owner_id == current_user.id)
     
@@ -73,12 +80,12 @@ async def get_cases(
     for case in cases:
         case_dict = {
             "id": case.id,
-            "case_number": case.case_number,
-            "title": case.title,
+            "expediente_number": case.expediente_number,
+            "client_name": case.client_name,
             "description": case.description,
             "status": case.status.value,
             "owner_id": case.owner_id,
-            "assigned_judge_id": case.assigned_judge_id,
+            "assigned_lawyer_id": case.assigned_lawyer_id,
             "created_at": case.created_at,
             "updated_at": case.updated_at,
             "owner": {
@@ -87,12 +94,12 @@ async def get_cases(
                 "email": case.owner.email,
                 "role": case.owner.role.value
             },
-            "assigned_judge": {
-                "id": case.assigned_judge.id,
-                "name": case.assigned_judge.name,
-                "email": case.assigned_judge.email,
-                "role": case.assigned_judge.role.value
-            } if case.assigned_judge else None
+            "assigned_lawyer": {
+                "id": case.assigned_lawyer.id,
+                "name": case.assigned_lawyer.name,
+                "email": case.assigned_lawyer.email,
+                "role": case.assigned_lawyer.role.value
+            } if case.assigned_lawyer else None
         }
         result.append(case_dict)
     
@@ -102,7 +109,7 @@ async def get_cases(
 async def search_cases(
     query: Optional[str] = None,
     status: Optional[CaseStatus] = None,
-    assigned_judge_id: Optional[int] = None,
+    assigned_lawyer_id: Optional[int] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     skip: int = 0,
@@ -111,26 +118,33 @@ async def search_cases(
     db: Session = Depends(get_db)
 ):
     """Buscar casos con filtros avanzados"""
-    # Start with base query
-    base_query = db.query(Case)
+    # 🔒 TENANT ISOLATION: Always filter by firm_id FIRST
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
     
-    # Apply role-based filtering (same as get_cases)
+    # Start with base query filtered by firm
+    base_query = db.query(Case).filter(Case.firm_id == current_user.firm_id)  # ← CRITICAL
+    
+    # Apply role-based filtering (same as get_cases, within same firm)
     if current_user.role == UserRole.LAWYER:
         base_query = base_query.filter(Case.owner_id == current_user.id)
     elif current_user.role == UserRole.JUDGE:
-        base_query = base_query.filter(Case.assigned_judge_id == current_user.id)
+        base_query = base_query.filter(Case.assigned_lawyer_id == current_user.id)
     elif current_user.role == UserRole.CLERK:
-        pass
+        pass  # Clerk can see all cases in their firm
     elif current_user.role == UserRole.ADMIN:
-        pass
+        pass  # Admin can see all cases in their firm
     else:
         base_query = base_query.filter(Case.owner_id == current_user.id)
     
     # Apply search filters
     if query:
         search_filter = (
-            Case.case_number.ilike(f"%{query}%") |
-            Case.title.ilike(f"%{query}%") |
+            Case.expediente_number.ilike(f"%{query}%") |
+            Case.client_name.ilike(f"%{query}%") |
             Case.description.ilike(f"%{query}%")
         )
         base_query = base_query.filter(search_filter)
@@ -138,8 +152,8 @@ async def search_cases(
     if status:
         base_query = base_query.filter(Case.status == status)
     
-    if assigned_judge_id:
-        base_query = base_query.filter(Case.assigned_judge_id == assigned_judge_id)
+    if assigned_lawyer_id:
+        base_query = base_query.filter(Case.assigned_lawyer_id == assigned_lawyer_id)
     
     if start_date:
         try:
@@ -163,12 +177,12 @@ async def search_cases(
     for case in cases:
         case_dict = {
             "id": case.id,
-            "case_number": case.case_number,
-            "title": case.title,
+            "expediente_number": case.expediente_number,
+            "client_name": case.client_name,
             "description": case.description,
             "status": case.status.value,
             "owner_id": case.owner_id,
-            "assigned_judge_id": case.assigned_judge_id,
+            "assigned_lawyer_id": case.assigned_lawyer_id,
             "created_at": case.created_at,
             "updated_at": case.updated_at,
             "owner": {
@@ -177,12 +191,12 @@ async def search_cases(
                 "email": case.owner.email,
                 "role": case.owner.role.value
             },
-            "assigned_judge": {
-                "id": case.assigned_judge.id,
-                "name": case.assigned_judge.name,
-                "email": case.assigned_judge.email,
-                "role": case.assigned_judge.role.value
-            } if case.assigned_judge else None
+            "assigned_lawyer": {
+                "id": case.assigned_lawyer.id,
+                "name": case.assigned_lawyer.name,
+                "email": case.assigned_lawyer.email,
+                "role": case.assigned_lawyer.role.value
+            } if case.assigned_lawyer else None
         }
         result.append(case_dict)
     
@@ -195,7 +209,17 @@ async def get_case(
     db: Session = Depends(get_db)
 ):
     """Obtener detalles de un caso específico"""
-    case = db.query(Case).filter(Case.id == case_id).first()
+    # 🔒 TENANT ISOLATION: Filter by firm_id FIRST
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+    
+    case = db.query(Case).filter(
+        Case.id == case_id,
+        Case.firm_id == current_user.firm_id  # ← CRITICAL: Prevent cross-tenant access
+    ).first()
     
     if not case:
         raise HTTPException(
@@ -203,9 +227,9 @@ async def get_case(
             detail="Caso no encontrado"
         )
     
-    # Check permissions based on role with deny-by-default
+    # Check permissions based on role with deny-by-default (within same firm)
     if current_user.role == UserRole.ADMIN or current_user.role == UserRole.CLERK:
-        # Admin and clerk can view all cases
+        # Admin and clerk can view all cases in their firm
         pass
     elif current_user.role == UserRole.LAWYER:
         # Lawyers can only view their own cases
@@ -216,7 +240,7 @@ async def get_case(
             )
     elif current_user.role == UserRole.JUDGE:
         # Judges can only view cases assigned to them
-        if case.assigned_judge_id != current_user.id:
+        if case.assigned_lawyer_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permiso para ver este caso"
@@ -237,12 +261,12 @@ async def get_case(
     
     return {
         "id": case.id,
-        "case_number": case.case_number,
-        "title": case.title,
+        "expediente_number": case.expediente_number,
+        "client_name": case.client_name,
         "description": case.description,
         "status": case.status.value,
         "owner_id": case.owner_id,
-        "assigned_judge_id": case.assigned_judge_id,
+        "assigned_lawyer_id": case.assigned_lawyer_id,
         "created_at": case.created_at,
         "updated_at": case.updated_at,
         "owner": {
@@ -251,12 +275,12 @@ async def get_case(
             "email": case.owner.email,
             "role": case.owner.role.value
         },
-        "assigned_judge": {
-            "id": case.assigned_judge.id,
-            "name": case.assigned_judge.name,
-            "email": case.assigned_judge.email,
-            "role": case.assigned_judge.role.value
-        } if case.assigned_judge else None
+        "assigned_lawyer": {
+            "id": case.assigned_lawyer.id,
+            "name": case.assigned_lawyer.name,
+            "email": case.assigned_lawyer.email,
+            "role": case.assigned_lawyer.role.value
+        } if case.assigned_lawyer else None
     }
 
 @router.post("/", response_model=CaseResponse, status_code=status.HTTP_201_CREATED)
@@ -266,8 +290,18 @@ async def create_case(
     db: Session = Depends(get_db)
 ):
     """Crear un nuevo caso"""
-    # Check if case number already exists
-    existing_case = db.query(Case).filter(Case.case_number == case_data.case_number).first()
+    # 🔒 TENANT ISOLATION: Ensure user belongs to a firm
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+    
+    # Check if case number already exists (within same firm)
+    existing_case = db.query(Case).filter(
+        Case.expediente_number == case_data.expediente_number,
+        Case.firm_id == current_user.firm_id  # ← CRITICAL: Case numbers unique per firm
+    ).first()
     if existing_case:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -288,18 +322,18 @@ async def create_case(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permiso para establecer el estado del caso"
             )
-        if case_data.assigned_judge_id is not None:
+        if case_data.assigned_lawyer_id is not None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permiso para asignar un juez al caso"
             )
     
     # Validate assigned judge if provided
-    assigned_judge_id = None
-    if case_data.assigned_judge_id is not None:
+    assigned_lawyer_id = None
+    if case_data.assigned_lawyer_id is not None:
         if can_set_sensitive_fields:
             judge = db.query(User).filter(
-                User.id == case_data.assigned_judge_id,
+                User.id == case_data.assigned_lawyer_id,
                 User.role == UserRole.JUDGE
             ).first()
             if not judge:
@@ -307,16 +341,17 @@ async def create_case(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="El juez asignado no existe o no tiene el rol correcto"
                 )
-            assigned_judge_id = case_data.assigned_judge_id
+            assigned_lawyer_id = case_data.assigned_lawyer_id
     
     # Create new case with validated data
     new_case = Case(
-        case_number=case_data.case_number,
-        title=case_data.title,
+        firm_id=current_user.firm_id,  # ← CRITICAL: Always set firm_id
+        expediente_number=case_data.expediente_number,
+        client_name=case_data.client_name,
         description=case_data.description,
         status=case_data.status if can_set_sensitive_fields else CaseStatus.PENDING,
         owner_id=current_user.id,
-        assigned_judge_id=assigned_judge_id
+        assigned_lawyer_id=assigned_lawyer_id
     )
     
     db.add(new_case)
@@ -329,7 +364,7 @@ async def create_case(
         action="create_case",
         resource_type="case",
         resource_id=new_case.id,
-        details=f"Created case {new_case.case_number}",
+        details=f"Created case {new_case.expediente_number}",
         status="success"
     )
     db.add(audit_log)
@@ -337,12 +372,12 @@ async def create_case(
     
     return {
         "id": new_case.id,
-        "case_number": new_case.case_number,
-        "title": new_case.title,
+        "expediente_number": new_case.expediente_number,
+        "client_name": new_case.client_name,
         "description": new_case.description,
         "status": new_case.status.value,
         "owner_id": new_case.owner_id,
-        "assigned_judge_id": new_case.assigned_judge_id,
+        "assigned_lawyer_id": new_case.assigned_lawyer_id,
         "created_at": new_case.created_at,
         "updated_at": new_case.updated_at,
         "owner": {
@@ -351,12 +386,12 @@ async def create_case(
             "email": new_case.owner.email,
             "role": new_case.owner.role.value
         },
-        "assigned_judge": {
-            "id": new_case.assigned_judge.id,
-            "name": new_case.assigned_judge.name,
-            "email": new_case.assigned_judge.email,
-            "role": new_case.assigned_judge.role.value
-        } if new_case.assigned_judge else None
+        "assigned_lawyer": {
+            "id": new_case.assigned_lawyer.id,
+            "name": new_case.assigned_lawyer.name,
+            "email": new_case.assigned_lawyer.email,
+            "role": new_case.assigned_lawyer.role.value
+        } if new_case.assigned_lawyer else None
     }
 
 @router.put("/{case_id}", response_model=CaseResponse)
@@ -369,7 +404,18 @@ async def update_case(
     """Actualizar un caso existente"""
     from app.core.cache import get_cache_manager
     cache = get_cache_manager()
-    case = db.query(Case).filter(Case.id == case_id).first()
+    
+    # 🔒 TENANT ISOLATION: Filter by firm_id FIRST
+    if not current_user.firm_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to any firm"
+        )
+    
+    case = db.query(Case).filter(
+        Case.id == case_id,
+        Case.firm_id == current_user.firm_id  # ← CRITICAL: Prevent cross-tenant access
+    ).first()
     
     if not case:
         raise HTTPException(
@@ -377,17 +423,17 @@ async def update_case(
             detail="Caso no encontrado"
         )
     
-    # Determine allowed fields and access based on role
+    # Determine allowed fields and access based on role (within same firm)
     can_update_sensitive_fields = False
     can_access_case = False
     
     if current_user.role == UserRole.ADMIN or current_user.role == UserRole.CLERK:
-        # Admin and clerk can update all cases and all fields
+        # Admin and clerk can update all cases and all fields in their firm
         can_access_case = True
         can_update_sensitive_fields = True
     elif current_user.role == UserRole.JUDGE:
         # Judges can update cases assigned to them, including status
-        if case.assigned_judge_id == current_user.id:
+        if case.assigned_lawyer_id == current_user.id:
             can_access_case = True
             can_update_sensitive_fields = True
         else:
@@ -430,15 +476,15 @@ async def update_case(
     
     # Check if trying to update sensitive fields without permission
     if not can_update_sensitive_fields:
-        if case_data.status is not None or case_data.assigned_judge_id is not None:
+        if case_data.status is not None or case_data.assigned_lawyer_id is not None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permiso para modificar el estado o asignación del caso"
             )
     
     # Update allowed fields
-    if case_data.title is not None:
-        case.title = case_data.title
+    if case_data.client_name is not None:
+        case.client_name = case_data.client_name
     if case_data.description is not None:
         case.description = case_data.description
     
@@ -446,11 +492,11 @@ async def update_case(
     if can_update_sensitive_fields:
         if case_data.status is not None:
             case.status = case_data.status
-        if case_data.assigned_judge_id is not None:
+        if case_data.assigned_lawyer_id is not None:
             # Verify the assigned judge exists and is actually a judge
-            if case_data.assigned_judge_id:
+            if case_data.assigned_lawyer_id:
                 judge = db.query(User).filter(
-                    User.id == case_data.assigned_judge_id,
+                    User.id == case_data.assigned_lawyer_id,
                     User.role == UserRole.JUDGE
                 ).first()
                 if not judge:
@@ -458,7 +504,7 @@ async def update_case(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="El juez asignado no existe o no tiene el rol correcto"
                     )
-            case.assigned_judge_id = case_data.assigned_judge_id
+            case.assigned_lawyer_id = case_data.assigned_lawyer_id
     
     db.commit()
     db.refresh(case)
@@ -471,7 +517,7 @@ async def update_case(
         action="update_case",
         resource_type="case",
         resource_id=case.id,
-        details=f"Updated case {case.case_number}",
+        details=f"Updated case {case.expediente_number}",
         status="success"
     )
     db.add(audit_log)
@@ -479,12 +525,12 @@ async def update_case(
     
     return {
         "id": case.id,
-        "case_number": case.case_number,
-        "title": case.title,
+        "expediente_number": case.expediente_number,
+        "client_name": case.client_name,
         "description": case.description,
         "status": case.status.value,
         "owner_id": case.owner_id,
-        "assigned_judge_id": case.assigned_judge_id,
+        "assigned_lawyer_id": case.assigned_lawyer_id,
         "created_at": case.created_at,
         "updated_at": case.updated_at,
         "owner": {
@@ -493,12 +539,12 @@ async def update_case(
             "email": case.owner.email,
             "role": case.owner.role.value
         },
-        "assigned_judge": {
-            "id": case.assigned_judge.id,
-            "name": case.assigned_judge.name,
-            "email": case.assigned_judge.email,
-            "role": case.assigned_judge.role.value
-        } if case.assigned_judge else None
+        "assigned_lawyer": {
+            "id": case.assigned_lawyer.id,
+            "name": case.assigned_lawyer.name,
+            "email": case.assigned_lawyer.email,
+            "role": case.assigned_lawyer.role.value
+        } if case.assigned_lawyer else None
     }
 
 @router.delete("/{case_id}")
@@ -524,7 +570,7 @@ async def delete_case(
         action="delete_case",
         resource_type="case",
         resource_id=case.id,
-        details=f"Deleted case {case.case_number}",
+        details=f"Deleted case {case.expediente_number}",
         status="success"
     )
     db.add(audit_log)
@@ -534,7 +580,7 @@ async def delete_case(
     
     await cache.invalidate_case(case_id)
     
-    return {"message": f"Caso {case.case_number} eliminado exitosamente"}
+    return {"message": f"Caso {case.expediente_number} eliminado exitosamente"}
 
 @router.get("/stats/summary")
 async def get_case_stats(
@@ -548,7 +594,7 @@ async def get_case_stats(
     if current_user.role == UserRole.LAWYER:
         query = query.filter(Case.owner_id == current_user.id)
     elif current_user.role == UserRole.JUDGE:
-        query = query.filter(Case.assigned_judge_id == current_user.id)
+        query = query.filter(Case.assigned_lawyer_id == current_user.id)
     
     total = query.count()
     pending = query.filter(Case.status == CaseStatus.PENDING).count()

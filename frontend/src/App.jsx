@@ -12,12 +12,13 @@ import ResetPassword from './components/ResetPassword';
 import CasesList from './components/CasesList';
 import DocumentsList from './components/DocumentsList';
 import UsersList from './components/UsersList';
-import Settings from './components/Settings';
+import Settings from './pages/Settings';
 import Audit from './pages/Audit';
 import BillingDashboard from './components/BillingDashboard';
 import Chat from './components/Chat';
 import DocumentDrafting from './components/DocumentDrafting';
 import PrivateRoute from './components/PrivateRoute';
+import Pricing from './pages/Pricing'; // Added Pricing import
 import { useTranslation } from 'react-i18next';
 
 function AppContent() {
@@ -153,6 +154,17 @@ function AppContent() {
             <PrivateRoute requiredRoles={['admin', 'lawyer', 'assistant']}>
               <Layout onToggleTheme={toggleTheme} mode={mode}>
                 <DocumentDrafting />
+              </Layout>
+            </PrivateRoute>
+          }
+        />
+        {/* Added Pricing Route */}
+        <Route
+          path="/pricing"
+          element={
+            <PrivateRoute>
+              <Layout onToggleTheme={toggleTheme} mode={mode}>
+                <Pricing />
               </Layout>
             </PrivateRoute>
           }

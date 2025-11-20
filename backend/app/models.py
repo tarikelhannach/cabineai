@@ -107,6 +107,8 @@ class Firm(Base):
     # Billing fields
     implementation_fee_paid = Column(Boolean, default=False)
     monthly_fee_per_lawyer = Column(Integer, default=270)
+    stripe_customer_id = Column(String(255), nullable=True)
+    stripe_subscription_id = Column(String(255), nullable=True)
     
     # Preferences
     language_preference = Column(Enum(LanguagePreference), default=LanguagePreference.FRENCH, nullable=False)
@@ -243,6 +245,11 @@ class Document(Base):
     is_searchable = Column(Boolean, default=False)
     is_signed = Column(Boolean, default=False)
     signature_hash = Column(String(500))
+    
+    # Verification fields
+    is_verified = Column(Boolean, default=False)
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships

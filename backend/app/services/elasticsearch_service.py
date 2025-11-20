@@ -17,7 +17,18 @@ class ElasticsearchService:
         self.connected = False
         
         try:
-            self.es = Elasticsearch([self.es_url], request_timeout=30)
+            # Optional security: basic auth or API key
+            es_username = os.getenv('ELASTICSEARCH_USERNAME')
+            es_password = os.getenv('ELASTICSEARCH_PASSWORD')
+            es_api_key = os.getenv('ELASTICSEARCH_API_KEY')
+            
+            if es_api_key:
+                self.es = Elasticsearch(self.es_url, api_key=es_api_key, request_timeout=30)
+            elif es_username and es_password:
+                self.es = Elasticsearch(self.es_url, basic_auth=(es_username, es_password), request_timeout=30)
+            else:
+                self.es = Elasticsearch(self.es_url, request_timeout=30)
+            
             self.connected = self.es.ping()
             if self.connected:
                 logger.info(f"✅ Connected to Elasticsearch at {self.es_url}")

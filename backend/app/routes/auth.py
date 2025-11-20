@@ -32,7 +32,13 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     name: str
     password: str
-    role: UserRole = UserRole.CITIZEN
+    password: str
+    role: UserRole = UserRole.LAWYER
+    firm_name: str
+
+class InviteRequest(BaseModel):
+    email: EmailStr
+    role: UserRole = UserRole.LAWYER
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -109,9 +115,9 @@ async def login(request: Request, response: Response, login_data: LoginRequest, 
     }
 
 @router.post("/register", response_model=TokenResponse)
-@ip_limiter.limit("3/hour")  # Max 3 registrations per hour per IP
+@ip_limiter.limit("3/hour")
 async def register(request: Request, response: Response, register_data: RegisterRequest, db: Session = Depends(get_db)):
-    """Registrar nuevo usuario con rate limiting (3 registros/hora por IP)"""
+    """Registrar nueva firma y usuario administrador"""
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == register_data.email).first()
     if existing_user:
@@ -120,12 +126,25 @@ async def register(request: Request, response: Response, register_data: Register
             detail="El email ya está registrado"
         )
     
-    # Create new user
+    # Create Firm
+    from ..models import Firm, SubscriptionStatus, SubscriptionTier
+    new_firm = Firm(
+        name=register_data.firm_name,
+        email=register_data.email,  # Contact email
+        subscription_status=SubscriptionStatus.TRIAL,
+        subscription_tier=SubscriptionTier.BASIC
+    )
+    db.add(new_firm)
+    db.commit()
+    db.refresh(new_firm)
+    
+    # Create Admin User
     new_user = User(
         email=register_data.email,
         name=register_data.name,
         hashed_password=get_password_hash(register_data.password[:72]),
-        role=register_data.role,
+        role=UserRole.ADMIN,
+        firm_id=new_firm.id,
         is_active=True,
         is_verified=False
     )
@@ -144,9 +163,10 @@ async def register(request: Request, response: Response, register_data: Register
     # Log registration
     audit_log = AuditLog(
         user_id=new_user.id,
-        action="user_registered",
-        resource_type="user",
-        resource_id=new_user.id,
+        firm_id=new_firm.id,
+        action="firm_registered",
+        resource_type="firm",
+        resource_id=new_firm.id,
         status="success"
     )
     db.add(audit_log)
@@ -164,6 +184,44 @@ async def register(request: Request, response: Response, register_data: Register
             "is_verified": new_user.is_verified
         }
     }
+
+@router.post("/invite")
+async def invite_user(
+    invite_data: InviteRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Invitar usuario a la firma (Solo Admin)"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo administradores pueden invitar")
+        
+    # Check limits
+    firm = db.query(Firm).filter(Firm.id == current_user.firm_id).first()
+    current_users_count = db.query(User).filter(User.firm_id == firm.id).count()
+    
+    if current_users_count >= firm.max_users:
+        raise HTTPException(status_code=400, detail="Límite de usuarios alcanzado")
+        
+    # Create user (placeholder password)
+    import secrets
+    temp_password = secrets.token_urlsafe(10)
+    
+    new_user = User(
+        email=invite_data.email,
+        name=invite_data.email.split('@')[0],
+        hashed_password=get_password_hash(temp_password),
+        role=invite_data.role,
+        firm_id=firm.id,
+        is_active=True,
+        is_verified=True # Invited users are trusted
+    )
+    
+    db.add(new_user)
+    db.commit()
+    
+    # TODO: Send email with temp_password
+    
+    return {"message": "Usuario invitado exitosamente", "temp_password": temp_password}
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):

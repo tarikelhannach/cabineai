@@ -37,6 +37,9 @@ class DocumentUploadResponse(BaseModel):
     file_path: str
     message: str
 
+class UpdateOCRRequest(BaseModel):
+    ocr_text: str
+
 UPLOAD_DIR = Path("/tmp/judicial_documents")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -403,8 +406,75 @@ async def process_document_ocr_sync(
         }
     
     except Exception as e:
+            detail=f"Error al procesar OCR: {str(e)}"
+        )
+
+@router.put("/{document_id}/ocr")
+async def update_document_ocr(
+    document_id: int,
+    request: UpdateOCRRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Update OCR text for a document (Human-in-the-loop verification).
+    Marks the document as verified.
+    """
+    # 🔒 TENANT ISOLATION: Filter by firm_id
+    document = db.query(DocumentModel).filter(
+        DocumentModel.id == document_id,
+        DocumentModel.firm_id == current_user.firm_id
+    ).first()
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found or access denied"
+        )
+    
+    # RBAC: Check permissions (only lawyers/admins/assistants can verify)
+    if current_user.role.value not in ["admin", "lawyer", "assistant"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to verify documents"
+        )
+    
+    try:
+        # Update OCR text
+        document.ocr_text = request.ocr_text
+        document.is_verified = True
+        document.verified_at = datetime.utcnow()
+        
+        # Re-index in Elasticsearch if available
+        try:
+            from app.services.elasticsearch_service import get_elasticsearch_service
+            es_service = get_elasticsearch_service()
+            es_service.index_document({
+                'document_id': document.id,
+                'filename': document.filename,
+                'ocr_text': document.ocr_text,
+                'ocr_language': document.ocr_language,
+                'ocr_confidence': document.ocr_confidence,
+                'case_id': document.case_id,
+                'uploaded_by': document.uploaded_by,
+                'is_searchable': True
+            })
+        except Exception:
+            # Ignore ES errors during update
+            pass
+            
+        db.commit()
+        db.refresh(document)
+        
+        return {
+            "message": "OCR updated and verified successfully",
+            "id": document.id,
+            "is_verified": True
+        }
+        
+    except Exception as e:
         db.rollback()
         raise HTTPException(
-            status_code=500,
-            detail=f"Error al procesar OCR: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating OCR: {str(e)}"
         )

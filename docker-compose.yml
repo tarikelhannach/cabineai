@@ -226,7 +226,7 @@ services:
     networks:
       - justicia-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_health"]
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -234,7 +234,7 @@ services:
   # Celery worker for CPU-intensive tasks (OCR, document processing)
   celery-cpu:
     build: ./backend
-    command: celery -A backend.app.celery.celery worker -Q cpu_intensive --concurrency=2 --loglevel=info --max-tasks-per-child=100
+    command: celery -A app.tasks.celery_app.celery_app worker -Q cpu_intensive --concurrency=2 --loglevel=info --max-tasks-per-child=100
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
@@ -264,7 +264,7 @@ services:
   # Celery worker for I/O bound tasks
   celery-io:
     build: ./backend
-    command: celery -A backend.app.celery.celery worker -Q io_bound --concurrency=4 --loglevel=info --max-tasks-per-child=200
+    command: celery -A app.tasks.celery_app.celery_app worker -Q io_bound --concurrency=4 --loglevel=info --max-tasks-per-child=200
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
@@ -292,7 +292,7 @@ services:
   # Celery worker for HSM operations
   celery-hsm:
     build: ./backend
-    command: celery -A backend.app.celery.celery worker -Q hsm_operations --concurrency=1 --loglevel=info --max-tasks-per-child=50
+    command: celery -A app.tasks.celery_app.celery_app worker -Q hsm_operations --concurrency=1 --loglevel=info --max-tasks-per-child=50
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
@@ -325,7 +325,7 @@ services:
   # Celery Beat for scheduled tasks
   celery-beat:
     build: ./backend
-    command: celery -A backend.app.celery.celery beat --loglevel=info
+    command: celery -A app.tasks.celery_app.celery_app beat --loglevel=info
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
@@ -373,7 +373,7 @@ services:
   # Flower for Celery monitoring
   flower:
     build: ./backend
-    command: celery -A backend.app.celery.celery flower --port=5555
+    command: celery -A app.tasks.celery_app.celery_app flower --port=5555
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}

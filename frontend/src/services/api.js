@@ -39,22 +39,22 @@ export const authAPI = {
     const response = await api.post('/auth/login', { email, password });
     return response.data;
   },
-  
+
   loginWith2FA: async (email, password, totp_code = null) => {
     const response = await api.post('/auth/login-2fa', { email, password, totp_code });
     return response.data;
   },
-  
+
   register: async (email, name, password, role = 'citizen') => {
     const response = await api.post('/auth/register', { email, name, password, role });
     return response.data;
   },
-  
+
   getCurrentUser: async () => {
     const response = await api.get('/auth/me');
     return response.data;
   },
-  
+
   logout: async () => {
     const response = await api.post('/auth/logout');
     return response.data;
@@ -91,27 +91,27 @@ export const casesAPI = {
     const response = await api.get('/cases/', { params });
     return response.data;
   },
-  
+
   getCase: async (caseId) => {
     const response = await api.get(`/cases/${caseId}`);
     return response.data;
   },
-  
+
   createCase: async (caseData) => {
     const response = await api.post('/cases/', caseData);
     return response.data;
   },
-  
+
   updateCase: async (caseId, caseData) => {
     const response = await api.put(`/cases/${caseId}`, caseData);
     return response.data;
   },
-  
+
   deleteCase: async (caseId) => {
     const response = await api.delete(`/cases/${caseId}`);
     return response.data;
   },
-  
+
   getCaseStats: async () => {
     const response = await api.get('/cases/stats/summary');
     return response.data;
@@ -125,7 +125,7 @@ export const documentsAPI = {
     if (caseId) {
       formData.append('case_id', caseId);
     }
-    
+
     const response = await api.post('/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -133,26 +133,31 @@ export const documentsAPI = {
     });
     return response.data;
   },
-  
+
   getDocuments: async (params = {}) => {
     const response = await api.get('/documents/', { params });
     return response.data;
   },
-  
+
   getDocument: async (documentId) => {
     const response = await api.get(`/documents/${documentId}`);
     return response.data;
   },
-  
+
   downloadDocument: async (documentId) => {
     const response = await api.get(`/documents/${documentId}/download`, {
       responseType: 'blob',
     });
     return response.data;
   },
-  
+
   deleteDocument: async (documentId) => {
     const response = await api.delete(`/documents/${documentId}`);
+    return response.data;
+  },
+
+  updateDocumentOCR: async (documentId, ocrText) => {
+    const response = await api.put(`/documents/${documentId}/ocr`, { ocr_text: ocrText });
     return response.data;
   },
 };

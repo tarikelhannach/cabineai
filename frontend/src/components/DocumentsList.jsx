@@ -27,28 +27,32 @@ import {
   Delete as DeleteIcon,
   CloudUpload as UploadIcon,
   AutoAwesome as ClassifyIcon,
+  CheckCircle as VerifyIcon,
+  Verified as VerifiedBadgeIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions';
 import api from '../services/api';
 import DocumentClassification from './DocumentClassification';
+import OCRVerification from './OCRVerification';
 
 const DocumentsList = () => {
   const { t } = useTranslation();
   const { canUploadDocument, canDeleteDocument } = usePermissions();
-  
+
   const [documents, setDocuments] = useState([]);
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
+
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedCaseId, setSelectedCaseId] = useState('');
-  
+
   const [openClassificationDialog, setOpenClassificationDialog] = useState(false);
+  const [openVerificationDialog, setOpenVerificationDialog] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
 
   const fetchDocuments = React.useCallback(async () => {
@@ -107,7 +111,7 @@ const DocumentsList = () => {
       const response = await api.get(`/documents/${documentId}/download`, {
         responseType: 'blob',
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -190,8 +194,11 @@ const DocumentsList = () => {
                 paginatedDocuments.map((doc) => (
                   <TableRow key={doc.id} hover>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body2" fontWeight={600} display="flex" alignItems="center" gap={1}>
                         {doc.filename}
+                        {doc.is_verified && (
+                          <VerifiedBadgeIcon color="success" fontSize="small" titleAccess={t('ocr.verified', 'Verificado')} />
+                        )}
                       </Typography>
                     </TableCell>
                     <TableCell>{doc.case?.case_number || 'N/A'}</TableCell>
@@ -212,6 +219,17 @@ const DocumentsList = () => {
                         title={t('classification.title', 'Clasificación Automática')}
                       >
                         <ClassifyIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setSelectedDocumentId(doc.id);
+                          setOpenVerificationDialog(true);
+                        }}
+                        title={t('ocr.verify', 'Verificar OCR')}
+                        color={doc.is_verified ? "success" : "default"}
+                      >
+                        <VerifyIcon />
                       </IconButton>
                       <IconButton
                         size="small"
@@ -270,7 +288,7 @@ const DocumentsList = () => {
                 </MenuItem>
               ))}
             </TextField>
-            
+
             <Button
               variant="outlined"
               component="label"
@@ -295,10 +313,10 @@ const DocumentsList = () => {
       </Dialog>
 
       {/* Classification Dialog */}
-      <Dialog 
-        open={openClassificationDialog} 
-        onClose={() => setOpenClassificationDialog(false)} 
-        maxWidth="md" 
+      <Dialog
+        open={openClassificationDialog}
+        onClose={() => setOpenClassificationDialog(false)}
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>{t('classification.title', 'Clasificación Automática')}</DialogTitle>
@@ -312,6 +330,29 @@ const DocumentsList = () => {
             {t('common.close', 'Cerrar')}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Verification Dialog */}
+      <Dialog
+        open={openVerificationDialog}
+        onClose={() => setOpenVerificationDialog(false)}
+        maxWidth="xl"
+        fullWidth
+        PaperProps={{
+          sx: { height: '90vh' }
+        }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          {selectedDocumentId && (
+            <OCRVerification
+              documentId={selectedDocumentId}
+              onClose={() => setOpenVerificationDialog(false)}
+              onVerified={() => {
+                fetchDocuments();
+              }}
+            />
+          )}
+        </DialogContent>
       </Dialog>
     </Box>
   );

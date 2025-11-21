@@ -28,6 +28,44 @@
     "results": "نتائج البحث",
     "noResults": "لا توجد نتائج"
   },
+  "billing": {
+    "title": "الفوترة والاشتراك",
+    "subscription": "الاشتراك",
+    "status": "الحالة",
+    "tier": "الباقة",
+    "monthlyFee": "الرسوم الشهرية",
+    "monthly_fee": "الرسوم الشهرية",
+    "invoices": "الفواتير",
+    "dueDate": "تاريخ الاستحقاق",
+    "due_date": "تاريخ الاستحقاق",
+    "amount": "المبلغ",
+    "paid": "مدفوع",
+    "pending": "معلق",
+    "overdue": "متأخر",
+    "subscription_status": "حالة الاشتراك",
+    "subscription_expired": "انتهت صلاحية اشتراكك. يرجى التجديد للمتابعة.",
+    "subscription_expiring_soon": "سينتهي اشتراكك خلال {{days}} يوم. يرجى التجديد قريباً.",
+    "days_remaining": "الأيام المتبقية",
+    "expires_on": "ينتهي في",
+    "month": "شهر",
+    "money_saved": "الأموال الموفرة",
+    "total_roi": "إجمالي العائد على الاستثمار",
+    "usage_statistics": "إحصائيات الاستخدام",
+    "active_users": "المستخدمين النشطين",
+    "documents": "المستندات",
+    "storage": "التخزين",
+    "used": "مستخدم",
+    "active_cases": "قضايا نشطة",
+    "time_saved": "الوق الموفر",
+    "hours": "ساعات",
+    "work_days": "أيام عمل",
+    "recent_invoices": "الفواتير الأخيرة",
+    "no_invoices": "لا توجد فواتير",
+    "invoice_number": "رقم الفاتورة",
+    "date": "التاريخ",
+    "download": "تحميل",
+    "view_all": "عرض الكل"
+  },
   "errors": {
     "generic": "حدث خطأ. يرجى المحاولة مرة أخرى"
   },
@@ -132,7 +170,16 @@
       "activeCases": "القضايا النشطة",
       "caseProgress": "تقدم القضية",
       "noCases": "لا توجد قضايا مسجلة"
-    }
+    },
+    "totalDocuments": "إجمالي المستندات",
+    "totalUsers": "إجمالي المستخدمين",
+    "activeCases": "القضايا النشطة",
+    "documentsUploadedTrend": "المستندات المحملة (آخر 30 يومًا)",
+    "casesByStatus": "حالة القضايا",
+    "action": "الإجراء",
+    "details": "التفاصيل",
+    "documents": "المستندات",
+    "noActivity": "لا يوجد نشاط حديث"
   },
   "status": {
     "pending": "معلق",
@@ -235,27 +282,6 @@
     "passwordMismatch": "كلمات المرور غير متطابقة",
     "notificationsSaved": "تم حفظ التفضيلات"
   },
-  "common": {
-    "welcome": "مرحبا",
-    "loading": "جاري التحميل...",
-    "error": "خطأ",
-    "success": "نجح",
-    "cancel": "إلغاء",
-    "save": "حفظ",
-    "delete": "حذف",
-    "edit": "تعديل",
-    "create": "إنشاء",
-    "search": "بحث",
-    "filter": "تصفية",
-    "refresh": "تحديث",
-    "close": "إغلاق",
-    "yes": "نعم",
-    "no": "لا",
-    "user": "مستخدم",
-    "actions": "الإجراءات",
-    "all": "الكل",
-    "rowsPerPage": "صفوف لكل صفحة"
-  },
   "a11y": {
     "skipToMainContent": "انتقل إلى المحتوى الرئيسي",
     "openMenu": "فتح القائمة",
@@ -302,5 +328,24 @@
     "error_creating_conversation": "خطأ في إنشاء المحادثة",
     "error_sending_message": "خطأ في إرسال الرسالة",
     "api_key_not_configured": "مفتاح OpenAI API غير مكوّن. يرجى الاتصال بالمسؤول."
+  },
+  "onboarding": {
+    "welcomeTitle": "مرحبا، {{name}}!",
+    "welcomeSubtitle": "دعنا نقم بإعداد مكتبك الرقمي في بضع خطوات.",
+    "firmDetails": "تفاصيل المكتب",
+    "firmName": "اسم المكتب",
+    "firmAddress": "العنوان",
+    "preferences": "التفضيلات",
+    "language": "اللغة الافتراضية",
+    "setupComplete": "كل شيء جاهز!",
+    "readyToStart": "تم إعداد مكتبك. انقر على إنهاء للوصول إلى لوحة التحكم الخاصة بك.",
+    "generateSampleData": "توليد بيانات تجريبية",
+    "sampleDataDesc": "إنشاء ملفات ومستندات وهمية لاستكشاف الواجهة.",
+    "steps": {
+      "welcome": "مرحبا",
+      "firmDetails": "المكتب",
+      "preferences": "التفضيلات",
+      "finish": "إنهاء"
+    }
   }
 }

@@ -17,6 +17,7 @@ import {
   InputAdornment,
   IconButton,
   Link,
+  CircularProgress
 } from '@mui/material';
 import {
   Visibility,
@@ -68,7 +69,7 @@ const Login = () => {
 
     try {
       const result = await login(formData.email, formData.password);
-      
+
       if (result.success) {
         // Login exitoso
         return;
@@ -103,7 +104,7 @@ const Login = () => {
         formData.password,
         formData.twoFactorCode
       );
-      
+
       if (!result.success) {
         setError(result.error);
       }
@@ -134,7 +135,7 @@ const Login = () => {
             <Typography variant="h6" gutterBottom align="center" color="textSecondary">
               🇲🇦 Reino de Marruecos
             </Typography>
-            
+
             <Box sx={{ mt: 3 }}>
               <TextField
                 fullWidth
@@ -151,7 +152,7 @@ const Login = () => {
                   ),
                 }}
               />
-              
+
               <TextField
                 fullWidth
                 label={t('auth.password')}
@@ -177,22 +178,35 @@ const Login = () => {
                   ),
                 }}
               />
-              
+
               {error && (
                 <Alert severity="error" sx={{ mt: 2 }}>
                   {error}
                 </Alert>
               )}
-              
+
               <Button
                 fullWidth
                 variant="contained"
                 size="large"
                 onClick={handleLogin}
                 disabled={loading}
-                sx={{ mt: 3 }}
+                sx={{
+                  mt: 3,
+                  py: 1.5,
+                  fontWeight: 600,
+                  '&.Mui-disabled': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                    color: 'rgba(0, 0, 0, 0.7)'
+                  }
+                }}
               >
-                {loading ? t('common.loading') : t('auth.loginButton')}
+                {loading ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={20} color="inherit" />
+                    {t('common.loading')}
+                  </Box>
+                ) : t('auth.loginButton')}
               </Button>
             </Box>
           </Box>
@@ -204,13 +218,13 @@ const Login = () => {
             <Typography variant="h5" gutterBottom align="center">
               {t('auth.2faCode')}
             </Typography>
-            
+
             <Paper sx={{ p: 2, mt: 2, mb: 2 }}>
               <Typography variant="body2" color="textSecondary">
                 {t('auth.2faHelper')}
               </Typography>
             </Paper>
-            
+
             <TextField
               fullWidth
               label={t('auth.2faCode')}
@@ -227,7 +241,7 @@ const Login = () => {
                 ),
               }}
             />
-            
+
             <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
               <Button
                 variant="outlined"
@@ -241,12 +255,23 @@ const Login = () => {
                 variant="contained"
                 onClick={handle2FA}
                 disabled={loading || !formData.twoFactorCode}
-                sx={{ flex: 1 }}
+                sx={{
+                  flex: 1,
+                  '&.Mui-disabled': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                    color: 'rgba(0, 0, 0, 0.7)'
+                  }
+                }}
               >
-                {loading ? t('common.loading') : t('auth.loginButton')}
+                {loading ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={20} color="inherit" />
+                    {t('common.loading')}
+                  </Box>
+                ) : t('auth.loginButton')}
               </Button>
             </Box>
-            
+
             {error && (
               <Alert severity="error" sx={{ mt: 2 }}>
                 {error}
@@ -293,11 +318,11 @@ const Login = () => {
               </Step>
             ))}
           </Stepper>
-          
+
           <Divider sx={{ mb: 3 }} />
-          
+
           {renderStepContent()}
-          
+
           <Box sx={{ mt: 4, textAlign: 'center' }}>
             <Link
               component="button"

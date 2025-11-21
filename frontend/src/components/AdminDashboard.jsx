@@ -17,6 +17,7 @@ import {
   alpha,
   useTheme,
   LinearProgress,
+  Paper,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -27,7 +28,20 @@ import {
   CheckCircle as CheckCircleIcon,
   HourglassEmpty as PendingIcon,
 } from '@mui/icons-material';
-import { casesAPI } from '../services/api';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import api from '../services/api'; // Use default export for generic API client
 import { useAuth } from '../context/AuthContext';
 import DocumentUpload from './DocumentUpload';
 import SearchBar from './SearchBar';
@@ -37,16 +51,8 @@ const AdminDashboard = () => {
   const theme = useTheme();
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    in_progress: 0,
-    resolved: 0,
-    closed: 0,
-  });
 
-  const [recentCases, setRecentCases] = useState([]);
-  const [searchResults, setSearchResults] = useState(null);
+  const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -56,13 +62,9 @@ const AdminDashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Obtener estadísticas reales del backend
-      const caseStats = await casesAPI.getCaseStats();
-      setStats(caseStats);
-
-      // Obtener casos recientes
-      const cases = await casesAPI.getCases({ skip: 0, limit: 5 });
-      setRecentCases(cases);
+      // Fetch aggregated metrics from new endpoint
+      const response = await api.get('/metrics/dashboard');
+      setMetrics(response.data);
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -74,81 +76,43 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 30000);
+    const interval = setInterval(fetchDashboardData, 60000); // Refresh every minute
     return () => clearInterval(interval);
   }, [fetchDashboardData]);
 
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: 'warning',
-      in_progress: 'info',
-      resolved: 'success',
-      closed: 'secondary',
-      archived: 'secondary',
-    };
-    return colors[status] || 'primary';
-  };
+  const COLORS = [
+    theme.palette.primary.main,
+    theme.palette.secondary.main,
+    theme.palette.success.main,
+    theme.palette.warning.main,
+    theme.palette.error.main,
+  ];
 
-  const getStatusLabel = (status) => {
-    const labels = {
-      pending: t('status.pending'),
-      in_progress: t('status.in_progress'),
-      resolved: t('status.resolved'),
-      closed: t('status.closed'),
-      archived: t('status.archived'),
-    };
-    return labels[status] || status;
-  };
-
-  const StatCard = ({ title, value, icon: Icon, color = 'primary', trend }) => (
+  const StatCard = ({ title, value, icon: Icon, color = 'primary' }) => (
     <Card
       sx={{
         position: 'relative',
         overflow: 'visible',
         background: alpha(theme.palette[color].main, 0.05),
         border: `1px solid ${alpha(theme.palette[color].main, 0.1)}`,
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '4px',
-          background: `linear-gradient(90deg, ${theme.palette[color].main}, ${theme.palette[color].light})`,
-          borderRadius: '16px 16px 0 0',
-        },
+        height: '100%',
       }}
     >
-      <CardContent sx={{ pt: 3 }}>
-        <Box display="flex" alignItems="flex-start" justifyContent="space-between">
-          <Box sx={{ flex: 1 }}>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mb: 1, fontWeight: 500 }}
-            >
+      <CardContent>
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
               {title}
             </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-              {loading ? '...' : value.toLocaleString()}
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              {loading ? '...' : value?.toLocaleString() || 0}
             </Typography>
-            {trend && (
-              <Box display="flex" alignItems="center" gap={0.5}>
-                <TrendingUpIcon fontSize="small" color={color} />
-                <Typography variant="caption" color={`${color}.main`} fontWeight={600}>
-                  {trend}
-                </Typography>
-              </Box>
-            )}
           </Box>
           <Box
             sx={{
               bgcolor: alpha(theme.palette[color].main, 0.1),
-              borderRadius: 3,
+              borderRadius: 2,
               p: 1.5,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
             }}
           >
             <Icon sx={{ fontSize: 32, color: theme.palette[color].main }} />
@@ -158,13 +122,10 @@ const AdminDashboard = () => {
     </Card>
   );
 
-  if (loading && stats.total === 0) {
+  if (loading && !metrics) {
     return (
-      <Box>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
-          {t('dashboard.title')}
-        </Typography>
-        <LinearProgress sx={{ mt: 2, borderRadius: 1 }} />
+      <Box sx={{ width: '100%', mt: 4 }}>
+        <LinearProgress />
       </Box>
     );
   }
@@ -172,251 +133,170 @@ const AdminDashboard = () => {
   return (
     <Box>
       {/* Header */}
-      <Box mb={4}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
-          {t('dashboard.title')}
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {t('common.welcome')} {user?.name} - {t(`roles.${user?.role}`)} 🇲🇦
-        </Typography>
+      <Box mb={4} display="flex" justifyContent="space-between" alignItems="center">
+        <Box>
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
+            {t('dashboard.title')}
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            {t('common.welcome')} {user?.name}
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<DescriptionIcon />}
+          onClick={() => setUploadDialogOpen(true)}
+        >
+          {t('dashboard.uploadDocument')}
+        </Button>
       </Box>
-
-      {/* Search Bar */}
-      <SearchBar onSearchResults={setSearchResults} />
 
       {/* Error Alert */}
       {error && (
         <Box mb={4}>
-          <Alert severity="error" onClose={() => setError(null)} sx={{ borderRadius: 2 }}>
+          <Alert severity="error" onClose={() => setError(null)}>
             {error}
           </Alert>
         </Box>
       )}
 
-      {/* Estado del Sistema */}
-      <Box mb={4}>
-        <Alert
-          severity="success"
-          icon={<CheckCircleIcon />}
-          sx={{
-            borderRadius: 2,
-            border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
-          }}
-          action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => fetchDashboardData()}
-              disabled={loading}
-              sx={{ fontWeight: 600 }}
-            >
-              {t('common.refresh')}
-            </Button>
-          }
-        >
-          <Typography variant="body2" fontWeight={600}>
-            {t('dashboard.systemStatus')}
-          </Typography>
-        </Alert>
-      </Box>
-
-      {/* Estadísticas Principales */}
+      {/* KPI Cards */}
       <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title={t('dashboard.totalCases')}
-            value={stats.total}
+            value={metrics?.kpi?.total_cases}
             icon={GavelIcon}
             color="primary"
-            trend={`${stats.total} ${t('dashboard.casesInSystem')}`}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title={t('dashboard.pendingCases')}
-            value={stats.pending}
-            icon={PendingIcon}
-            color="warning"
-            trend={`${stats.pending} ${t('dashboard.waitingAssignment')}`}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <StatCard
-            title={t('dashboard.inProgress')}
-            value={stats.in_progress}
+            title={t('dashboard.activeCases')}
+            value={metrics?.kpi?.active_cases}
             icon={TrendingUpIcon}
-            color="info"
-            trend={`${stats.in_progress} ${t('dashboard.active')}`}
+            color="warning"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title={t('dashboard.resolvedCases')}
-            value={stats.resolved}
-            icon={CheckCircleIcon}
-            color="success"
-            trend={`${stats.resolved} ${t('dashboard.completed')}`}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <StatCard
-            title={t('dashboard.closedCases')}
-            value={stats.closed}
-            icon={SecurityIcon}
-            color="secondary"
-            trend={`${stats.closed} ${t('dashboard.archived')}`}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <StatCard
-            title={t('dashboard.resolutionRate')}
-            value={stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}
+            title={t('dashboard.totalDocuments')}
+            value={metrics?.kpi?.total_documents}
             icon={DescriptionIcon}
-            color="secondary"
-            trend={`${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}% ${t('dashboard.completed')}`}
+            color="info"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            title={t('dashboard.totalUsers')}
+            value={metrics?.kpi?.total_users}
+            icon={PeopleIcon}
+            color="success"
           />
         </Grid>
       </Grid>
 
-      {/* Casos Recientes / Resultados de Búsqueda */}
+      {/* Charts Section */}
+      <Grid container spacing={3} mb={4}>
+        {/* Document Upload Trend */}
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 3, height: 400 }}>
+            <Typography variant="h6" gutterBottom fontWeight={600}>
+              {t('dashboard.documentsUploadedTrend')}
+            </Typography>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={metrics?.charts?.documents_trend || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill={theme.palette.primary.main} name={t('dashboard.documents')} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Grid>
+
+        {/* Cases by Status */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 3, height: 400 }}>
+            <Typography variant="h6" gutterBottom fontWeight={600}>
+              {t('dashboard.casesByStatus')}
+            </Typography>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={metrics?.charts?.cases_by_status || []}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {(metrics?.charts?.cases_by_status || []).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Recent Activity */}
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-            {searchResults ? t('search.results', 'Resultados de Búsqueda') : t('dashboard.recentCases')}
+            {t('dashboard.recentActivity')}
           </Typography>
-          {(searchResults || recentCases).length === 0 ? (
-            <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-              {searchResults ? t('search.noResults', 'No se encontraron resultados') : t('dashboard.noCases')}
-            </Typography>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>{t('dashboard.caseNumber')}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{t('dashboard.title')}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{t('dashboard.owner')}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{t('dashboard.assignedJudge')}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{t('dashboard.status')}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{t('dashboard.date')}</TableCell>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('common.user')}</TableCell>
+                  <TableCell>{t('dashboard.action')}</TableCell>
+                  <TableCell>{t('dashboard.details')}</TableCell>
+                  <TableCell>{t('dashboard.date')}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {(metrics?.recent_activity || []).map((log, index) => (
+                  <TableRow key={index} hover>
+                    <TableCell>{log.user}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={log.action}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>{JSON.stringify(log.details)}</TableCell>
+                    <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {(searchResults || recentCases).map((caseItem) => (
-                    <TableRow
-                      key={caseItem.id}
-                      sx={{
-                        '&:hover': {
-                          bgcolor: alpha(theme.palette.primary.main, 0.05),
-                        },
-                      }}
-                    >
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
-                          {caseItem.case_number}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {caseItem.title}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {caseItem.owner?.name || 'N/A'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {caseItem.assigned_judge?.name || t('dashboard.notAssigned')}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getStatusLabel(caseItem.status)}
-                          color={getStatusColor(caseItem.status)}
-                          size="small"
-                          sx={{ fontWeight: 600 }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {new Date(caseItem.created_at).toLocaleDateString('es-ES')}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Acciones Rápidas */}
-      <Card
-        sx={{
-          background: theme.palette.background.gradient,
-          color: 'white',
-        }}
-      >
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-            {t('dashboard.quickActions')}
-          </Typography>
-          <Box display="flex" gap={2} flexWrap="wrap" mt={2}>
-            <Button
-              variant="contained"
-              sx={{
-                bgcolor: 'white',
-                color: theme.palette.primary.main,
-                '&:hover': {
-                  bgcolor: alpha('#ffffff', 0.9),
-                },
-              }}
-              startIcon={<GavelIcon />}
-            >
-              {t('dashboard.newCase')}
-            </Button>
-            <Button
-              variant="outlined"
-              sx={{
-                borderColor: 'white',
-                color: 'white',
-                '&:hover': {
-                  borderColor: 'white',
-                  bgcolor: alpha('#ffffff', 0.1),
-                },
-              }}
-              startIcon={<DescriptionIcon />}
-              onClick={() => setUploadDialogOpen(true)}
-            >
-              {t('dashboard.uploadDocument')}
-            </Button>
-            <Button
-              variant="outlined"
-              sx={{
-                borderColor: 'white',
-                color: 'white',
-                '&:hover': {
-                  borderColor: 'white',
-                  bgcolor: alpha('#ffffff', 0.1),
-                },
-              }}
-              startIcon={<PeopleIcon />}
-            >
-              {t('dashboard.manageUsers')}
-            </Button>
-          </Box>
+                ))}
+                {(!metrics?.recent_activity || metrics.recent_activity.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      {t('dashboard.noActivity')}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </CardContent>
       </Card>
 
       <DocumentUpload
         open={uploadDialogOpen}
         onClose={() => setUploadDialogOpen(false)}
-        onUploadSuccess={(response) => {
-          console.log('Documento subido:', response);
+        onUploadSuccess={() => {
           setUploadDialogOpen(false);
+          fetchDashboardData(); // Refresh data
         }}
       />
     </Box>

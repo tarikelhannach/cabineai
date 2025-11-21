@@ -173,7 +173,16 @@
       "activeCases": "Affaires Actives",
       "caseProgress": "Progrès de l'Affaire",
       "noCases": "Aucune affaire enregistrée"
-    }
+    },
+    "totalDocuments": "Total des Documents",
+    "totalUsers": "Total des Utilisateurs",
+    "activeCases": "Affaires Actives",
+    "documentsUploadedTrend": "Documents Téléchargés (30 derniers jours)",
+    "casesByStatus": "Affaires par Statut",
+    "action": "Action",
+    "details": "Détails",
+    "documents": "Documents",
+    "noActivity": "Aucune activité récente"
   },
   "status": {
     "pending": "En Attente",
@@ -276,27 +285,6 @@
     "passwordMismatch": "Les mots de passe ne correspondent pas",
     "notificationsSaved": "Préférences enregistrées"
   },
-  "common": {
-    "welcome": "Bienvenue",
-    "loading": "Chargement...",
-    "error": "Erreur",
-    "success": "Succès",
-    "cancel": "Annuler",
-    "save": "Enregistrer",
-    "delete": "Supprimer",
-    "edit": "Modifier",
-    "create": "Créer",
-    "search": "Rechercher",
-    "filter": "Filtrer",
-    "refresh": "Actualiser",
-    "close": "Fermer",
-    "yes": "Oui",
-    "no": "Non",
-    "user": "Utilisateur",
-    "actions": "Actions",
-    "all": "Tous",
-    "rowsPerPage": "Lignes par page"
-  },
   "a11y": {
     "skipToMainContent": "Passer au contenu principal",
     "openMenu": "Ouvrir le menu",
@@ -343,5 +331,24 @@
     "error_creating_conversation": "Erreur lors de la création de la conversation",
     "error_sending_message": "Erreur lors de l'envoi du message",
     "api_key_not_configured": "Clé API OpenAI non configurée. Veuillez contacter votre administrateur."
+  },
+  "onboarding": {
+    "welcomeTitle": "Bienvenue, {{name}} !",
+    "welcomeSubtitle": "Configurons votre cabinet numérique en quelques étapes.",
+    "firmDetails": "Détails du Cabinet",
+    "firmName": "Nom du Cabinet",
+    "firmAddress": "Adresse",
+    "preferences": "Préférences",
+    "language": "Langue par défaut",
+    "setupComplete": "Tout est prêt !",
+    "readyToStart": "Votre cabinet est configuré. Cliquez sur Terminer pour accéder à votre tableau de bord.",
+    "generateSampleData": "Générer des données de démonstration",
+    "sampleDataDesc": "Crée des dossiers et documents fictifs pour explorer l'interface.",
+    "steps": {
+      "welcome": "Bienvenue",
+      "firmDetails": "Cabinet",
+      "preferences": "Préférences",
+      "finish": "Terminer"
+    }
   }
 }

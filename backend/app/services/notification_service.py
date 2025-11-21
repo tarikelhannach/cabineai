@@ -149,6 +149,26 @@ Sistema Judicial Digital - Marruecos
         except Exception as e:
             logger.error(f"Error sending signature required notification: {e}")
             return False
+
+    async def send_user_invitation(
+        self, 
+        email: str, 
+        password: str,
+        language: str = "ar"
+    ) -> bool:
+        """Enviar invitación a nuevo usuario"""
+        try:
+            subject = self._get_localized_text("invitation_subject", language)
+            message = self._get_localized_text("invitation_message", language).format(
+                email=email,
+                password=password
+            )
+            
+            return await self._send_email(email, subject, message)
+            
+        except Exception as e:
+            logger.error(f"Error sending invitation: {e}")
+            return False
     
     async def create_in_app_notification(
         self,
@@ -227,6 +247,20 @@ Sistema Judicial Digital - Marruecos
     def _get_localized_text(self, key: str, language: str) -> str:
         """Obtener texto localizado"""
         texts = {
+            "es": {
+                "welcome_subject": "Bienvenido al Sistema Judicial Digital - Marruecos",
+                "welcome_message": "Estimado/a {name},\n\nBienvenido al Sistema Judicial Digital del Reino de Marruecos.\n\nSu cuenta ha sido creada exitosamente y ahora puede acceder al sistema.\n\nGracias.\n\nSistema Judicial Digital - Marruecos",
+                "password_change_subject": "Contraseña modificada",
+                "password_change_message": "Estimado/a {name},\n\nSu contraseña ha sido modificada exitosamente el {timestamp}.\n\nSi no realizó este cambio, por favor contáctenos inmediatamente.\n\nSistema Judicial Digital - Marruecos",
+                "case_update_subject": "Actualización de caso",
+                "case_update_message": "El caso {case_number} ha sido actualizado.\n\nTipo de actualización: {update_type}\n\nPor favor inicie sesión para ver los detalles.\n\nSistema Judicial Digital - Marruecos",
+                "document_ready_subject": "Documento listo",
+                "document_ready_message": "El documento '{document_name}' ha sido procesado exitosamente y está listo para revisión.\n\nSistema Judicial Digital - Marruecos",
+                "signature_required_subject": "Firma requerida",
+                "signature_required_message": "El documento '{document_name}' requiere firma.\n\nPor favor inicie sesión para completar la firma.\n\nSistema Judicial Digital - Marruecos",
+                "invitation_subject": "Invitación a CabineAI - Sistema Judicial Digital",
+                "invitation_message": "Estimado/a,\n\nHa sido invitado a unirse a CabineAI.\n\nSus credenciales temporales son:\nEmail: {email}\nContraseña: {password}\n\nPor favor inicie sesión y cambie su contraseña inmediatamente.\n\nSistema Judicial Digital - Marruecos"
+            },
             "ar": {
                 "welcome_subject": "مرحباً بك في النظام القضائي الرقمي - المغرب",
                 "welcome_message": "عزيزي/عزيزة {name}،\n\nمرحباً بك في النظام القضائي الرقمي للمملكة المغربية.\n\nتم إنشاء حسابك بنجاح ويمكنك الآن الوصول إلى النظام.\n\nشكراً لك.\n\nالنظام القضائي الرقمي - المغرب",
@@ -237,7 +271,9 @@ Sistema Judicial Digital - Marruecos
                 "document_ready_subject": "الوثيقة جاهزة",
                 "document_ready_message": "تم معالجة الوثيقة '{document_name}' بنجاح وهي جاهزة للمراجعة.\n\nالنظام القضائي الرقمي - المغرب",
                 "signature_required_subject": "توقيع مطلوب",
-                "signature_required_message": "يتطلب توقيع الوثيقة '{document_name}'.\n\nيرجى تسجيل الدخول لإكمال التوقيع.\n\nالنظام القضائي الرقمي - المغرب"
+                "signature_required_message": "يتطلب توقيع الوثيقة '{document_name}'.\n\nيرجى تسجيل الدخول لإكمال التوقيع.\n\nالنظام القضائي الرقمي - المغرب",
+                "invitation_subject": "دعوة للانضمام إلى CabineAI",
+                "invitation_message": "مرحباً،\n\nلقد تمت دعوتك للانضمام إلى CabineAI.\n\nبيانات الاعتماد المؤقتة الخاصة بك هي:\nالبريد الإلكتروني: {email}\nكلمة المرور: {password}\n\nيرجى تسجيل الدخول وتغيير كلمة المرور الخاصة بك على الفور.\n\nالنظام القضائي الرقمي - المغرب"
             },
             "fr": {
                 "welcome_subject": "Bienvenue dans le Système Judiciaire Numérique - Maroc",
@@ -249,19 +285,9 @@ Sistema Judicial Digital - Marruecos
                 "document_ready_subject": "Document prêt",
                 "document_ready_message": "Le document '{document_name}' a été traité avec succès et est prêt pour révision.\n\nSystème Judiciaire Numérique - Maroc",
                 "signature_required_subject": "Signature requise",
-                "signature_required_message": "Le document '{document_name}' nécessite une signature.\n\nVeuillez vous connecter pour compléter la signature.\n\nSystème Judiciaire Numérique - Maroc"
-            },
-            "es": {
-                "welcome_subject": "Bienvenido al Sistema Judicial Digital - Marruecos",
-                "welcome_message": "Estimado/a {name},\n\nBienvenido al Sistema Judicial Digital del Reino de Marruecos.\n\nSu cuenta ha sido creada exitosamente y ahora puede acceder al sistema.\n\nGracias.\n\nSistema Judicial Digital - Marruecos",
-                "password_change_subject": "Contraseña modificada",
-                "password_change_message": "Estimado/a {name},\n\nSu contraseña ha sido modificada exitosamente el {timestamp}.\n\nSi no realizó este cambio, por favor contáctenos inmediatamente.\n\nSistema Judicial Digital - Marruecos",
-                "case_update_subject": "Actualización de caso",
-                "case_update_message": "El caso {case_number} ha sido actualizado.\n\nTipo de actualización: {update_type}\n\nPor favor inicie sesión para ver los detalles.\n\nSistema Judicial Digital - Marruecos",
-                "document_ready_subject": "Documento listo",
-                "document_ready_message": "El documento '{document_name}' ha sido procesado exitosamente y está listo para revisión.\n\nSistema Judicial Digital - Marruecos",
-                "signature_required_subject": "Firma requerida",
-                "signature_required_message": "El documento '{document_name}' requiere firma.\n\nPor favor inicie sesión para completar la firma.\n\nSistema Judicial Digital - Marruecos"
+                "signature_required_message": "Le document '{document_name}' nécessite une signature.\n\nVeuillez vous connecter pour compléter la signature.\n\nSystème Judiciaire Numérique - Maroc",
+                "invitation_subject": "Invitation à rejoindre CabineAI",
+                "invitation_message": "Bonjour,\n\nVous avez été invité à rejoindre CabineAI.\n\nVos identifiants temporaires sont :\nEmail : {email}\nMot de passe : {password}\n\nVeuillez vous connecter et changer votre mot de passe immédiatement.\n\nSystème Judiciaire Numérique - Maroc"
             }
         }
         

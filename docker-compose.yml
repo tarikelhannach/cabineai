@@ -190,8 +190,8 @@ services:
     volumes:
       - redis_data:/data
     # 🔒 SECURITY: Remove port exposure in production - use internal network only
-    # ports:
-    #   - "6379:6379"
+    ports:
+      - "6379:6379"
     deploy:
       resources:
         limits:
@@ -228,8 +228,8 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     # 🔒 SECURITY: Remove port exposure in production - use internal network only
-    # ports:
-    #   - "9200:9200"
+    ports:
+      - "9200:9200"
     deploy:
       resources:
         limits:

@@ -39,6 +39,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from './LanguageSelector';
 import SkipNavigation from './SkipNavigation';
+import OnboardingWizard from './OnboardingWizard';
 
 const drawerWidth = 280;
 
@@ -71,6 +72,14 @@ const Layout = ({ children, onToggleTheme, mode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  React.useEffect(() => {
+    const completed = localStorage.getItem('onboarding_completed');
+    if (!completed && user) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -449,6 +458,16 @@ const Layout = ({ children, onToggleTheme, mode }) => {
 
         {children}
       </Box>
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={() => {
+          localStorage.setItem('onboarding_completed', 'true');
+          setShowOnboarding(false);
+        }}
+      />
     </Box>
   );
 };

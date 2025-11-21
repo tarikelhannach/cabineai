@@ -71,5 +71,12 @@ class Settings:
         # Auditoría
         self.enable_audit_logging = os.getenv("ENABLE_AUDIT_LOGGING", "true").lower() == "true"
 
+        # Email / SMTP
+        self.smtp_host = os.getenv("SMTP_HOST")
+        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        self.smtp_user = os.getenv("SMTP_USER")
+        self.smtp_password = os.getenv("SMTP_PASSWORD")
+        self.smtp_tls = os.getenv("SMTP_TLS", "true").lower() == "true"
+
 # Singleton
 settings = Settings()

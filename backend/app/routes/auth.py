@@ -20,9 +20,11 @@ from ..auth.utils import (
 )
 from ..config import settings
 from ..middleware.rate_limit import ip_limiter
+from ..services.notification_service import NotificationService
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 twofa = TwoFactorAuth()
+notification_service = NotificationService()
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -219,9 +221,13 @@ async def invite_user(
     db.add(new_user)
     db.commit()
     
-    # TODO: Send email with temp_password
+    # Send invitation email
+    email_sent = await notification_service.send_user_invitation(
+        email=invite_data.email,
+        password=temp_password,
+        language="fr" # Default to French for business context, or could be passed in request
+    )
     
-    # 🔒 SECURITY: Don't return temp_password in response (should be sent via email/SMS)
     # Log the invitation for audit purposes
     audit_log = AuditLog(
         user_id=current_user.id,
@@ -229,20 +235,19 @@ async def invite_user(
         action="user_invited",
         resource_type="user",
         resource_id=new_user.id,
-        details=f"Invited user {invite_data.email}",
+        details=f"Invited user {invite_data.email}. Email sent: {email_sent}",
         status="success"
     )
     db.add(audit_log)
     db.commit()
     
-    # 🔒 SECURITY: NEVER log passwords in plain text - this is a critical security vulnerability
-    # Passwords should only be sent via secure channels (email/SMS) and never appear in logs
-    # TODO: Implement email/SMS sending service to deliver temp_password securely
-    # For development: The password is generated but must be sent via external secure channel
-    # In production, this MUST be implemented before allowing user invitations
-    
-    # Log invitation success without exposing password
     logger.info(f"User invitation created for {invite_data.email} by user {current_user.email}")
+    
+    if not email_sent:
+        return {
+            "message": "Usuario creado, pero falló el envío del email. Por favor contacte al soporte.",
+            "warning": "Email delivery failed"
+        }
     
     return {"message": "Usuario invitado exitosamente. La contraseña temporal ha sido enviada por email."}
 

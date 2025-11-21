@@ -8,7 +8,8 @@ sys.path.insert(0, '/home/runner/workspace/backend')
 
 logger = logging.getLogger(__name__)
 
-@shared_task(bind=True, max_retries=3, name='app.tasks.ocr_tasks.process_document_ocr')
+@shared_task(bind=True, max_retries=3, name='app.tasks.ocr_tasks.process_document_ocr', 
+             soft_time_limit=60)  # 60s soft limit (30s AI timeout + 30s buffer)
 def process_document_ocr(self, document_id: int):
     """
     Process OCR for uploaded document with async processing (40% faster).
@@ -81,6 +82,55 @@ def process_document_ocr(self, document_id: int):
             document.is_searchable = True
             
             db.commit()
+            
+            # AI Processing (NEW): Process document with DeepSeek AI
+            extracted_text = result.get('extracted_text', '')
+            if extracted_text and len(extracted_text.strip()) > 50:  # Only process if meaningful text
+                try:
+                    from app.services.ai_service import ai_service
+                    import asyncio
+                    
+                    logger.info(f"Starting AI processing for document {document_id}")
+                    
+                    # Run AI processing (async in sync context)
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    ai_results = loop.run_until_complete(ai_service.process_document(extracted_text))
+                    loop.close()
+                    
+                    # Update document with AI results
+                    document.ai_classification = ai_results.get('classification')
+                    document.ai_metadata = ai_results.get('metadata')
+                    document.ai_summary = ai_results.get('summary')
+                    document.ai_processed = True
+                    document.ai_processed_at = datetime.utcnow()
+                    
+                    if ai_results.get('error'):
+                        document.ai_error = ai_results['error']
+                        logger.warning(f"AI processing completed with errors for document {document_id}: {ai_results['error']}")
+                    else:
+                        logger.info(f"✅ AI processing completed successfully for document {document_id}")
+                    
+                    db.commit()
+                    
+                except Exception as ai_exc:
+                    # Graceful degradation: Log error but don't fail the entire task
+                    error_str = str(ai_exc)
+                    
+                    # Handle rate limits with exponential backoff
+                    if "429" in error_str or "rate_limit" in error_str.lower():
+                        logger.warning(f"Rate limit hit for document {document_id}, will retry")
+                        document.ai_error = f"Rate limit (will retry): {error_str}"
+                        db.commit()
+                        # Retry with exponential backoff (60s, 120s, 240s)
+                        raise self.retry(exc=ai_exc, countdown=60 * (2 ** self.request.retries))
+                    
+                    logger.error(f"AI processing failed for document {document_id}: {error_str}")
+                    document.ai_error = error_str
+                    document.ai_processed = False
+                    db.commit()
+            else:
+                logger.info(f"Skipping AI processing for document {document_id} (insufficient text)")
             
             logger.info(
                 f"OCR processing completed for document {document_id} "

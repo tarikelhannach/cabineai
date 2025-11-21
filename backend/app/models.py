@@ -1,6 +1,7 @@
 # backend/app/models.py - Multi-Tenant Commercial Models
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum, ForeignKey, Float, Date, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -249,6 +250,14 @@ class Document(Base):
     # Verification fields
     is_verified = Column(Boolean, default=False)
     verified_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # AI Processing fields
+    ai_summary = Column(Text, nullable=True)
+    ai_classification = Column(String(100), nullable=True)
+    ai_metadata = Column(JSONB, nullable=True)
+    ai_processed = Column(Boolean, default=False)
+    ai_processed_at = Column(DateTime(timezone=True), nullable=True)
+    ai_error = Column(Text, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

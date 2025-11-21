@@ -78,5 +78,13 @@ class Settings:
         self.smtp_password = os.getenv("SMTP_PASSWORD")
         self.smtp_tls = os.getenv("SMTP_TLS", "true").lower() == "true"
 
+        # AI Configuration (DeepSeek)
+        self.ai_api_key = os.getenv("AI_API_KEY", "")
+        self.ai_base_url = os.getenv("AI_BASE_URL", "https://api.deepseek.com")
+        self.ai_model = os.getenv("AI_MODEL", "deepseek-v3.2-exp")  # V3.2-Exp for legal docs
+        self.ai_timeout = int(os.getenv("AI_TIMEOUT", "30"))
+
+
+
 # Singleton
 settings = Settings()
